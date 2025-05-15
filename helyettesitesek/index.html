@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"> <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SZAG Helyettesítések</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Alap stílusok */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #4f46e5; animation: spin 1s linear infinite; }
+        .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 50; padding: 1rem; opacity: 0; transition: opacity 300ms ease-in-out; pointer-events: none; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background-color: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); transform: scale(0.95); transition: transform 300ms ease-in-out; max-width: 500px; width: 100%; }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .hidden { display: none !important; }
+
+        /* Admin overlay */
+        #admin-action-overlay { position: absolute; inset: 0; background-color: rgba(255, 255, 255, 0.75); display: flex; justify-content: center; align-items: center; z-index: 20; }
+        #admin-action-overlay.hidden { display: none; }
+        #admin-action-overlay .spinner { width: 24px; height: 24px; }
+
+        /* Betöltési állapot */
+        .view-loading::after { content: 'Adatok betöltése...'; display: block; text-align: center; padding: 2rem; color: #6b7280; font-style: italic; }
+
+        /* Teljes képernyős elrendezés */
+        html, body { height: 100%; }
+        body { display: flex; flex-direction: column; }
+        #main-content { flex-grow: 1; overflow-y: auto; padding-bottom: 60px; /* Hely a láblécnek */ }
+        footer { flex-shrink: 0; }
+
+        /* Publikus nézetek táblázat stílusok */
+        #public-main-view table,
+        #public-embed-view table {
+             width: 100%;
+             border-collapse: collapse;
+        }
+        #public-main-view table th,
+        #public-main-view table td {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            text-align: center; /* Középre igazítás */
+            font-weight: bold; /* Félkövér betűk */
+            white-space: pre-wrap; /* Megőrzi a sortöréseket és szóközöket */
+            word-break: break-word; /* Sortörés hosszú szavaknál */
+        }
+        #public-embed-view table th,
+        #public-embed-view table td {
+             /* Responsive padding and font size for embed view */
+             padding: clamp(0.1rem, 0.5vw, 0.5rem); /* Még kisebb padding */
+             font-size: clamp(0.6rem, 1.5vw, 0.9rem); /* Még dinamikusabb betűméret */
+             border: 1px solid #e5e7eb; /* gray-200 */
+             text-align: center; /* Középre igazítás */
+             font-weight: bold; /* Félkövér betűk */
+             white-space: pre-wrap; /* Megőrzi a sortöréseket és szóközöket */
+             word-break: break-word; /* Sortörés hosszú szavaknál */
+        }
+
+        #public-main-view table th,
+        #public-embed-view table th {
+            background-color: #f3f4f6; /* gray-100 */
+            font-weight: bold;
+            text-align: center; /* Középre igazítás */
+        }
+         #public-main-view table tr:nth-child(even),
+         #public-embed-view table tr:nth-child(even) {
+             background-color: #f9fafb; /* gray-50 */
+         }
+         #public-main-view table tr td:first-child,
+         #public-embed-view table tr td:first-child {
+             font-weight: normal; /* Óra számozás nem félkövér */
+             /* text-align: left; */ /* Óra számozás balra igazítva */
+         }
+         /* Embed nézet első oszlop szélességének fixálása tartalomra */
+         #public-embed-view table th:first-child,
+         #public-embed-view table td:first-child {
+             width: 50px; /* Fix vékony szélesség */
+             min-width: 50px;
+             max-width: 50px;
+             white-space: nowrap; /* Ne törje a sort */
+             padding-left: 0.5rem;
+             padding-right: 0.5rem;
+             text-align: center; /* Középre igazítás az óra számnak */
+         }
+          #public-main-view table th:first-child,
+          #public-main-view table td:first-child {
+              /* Responsive width for first column in main view */
+              width: clamp(50px, 10%, 100px);
+              min-width: 50px;
+              max-width: 100px;
+          }
+          #public-main-view table th:not(:first-child),
+          #public-main-view table td:not(:first-child),
+          #public-embed-view table th:not(:first-child),
+          #public-embed-view table td:not(:first-child) {
+              width: auto; /* Automatikus szélesség */
+          }
+
+
+        /* Admin szerkesztő táblázat stílusok */
+        #edit-view table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #edit-view table th,
+        #edit-view table td {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            text-align: left; /* Admin nézetben maradhat balra igazítva */
+        }
+        #edit-view table th {
+            background-color: #eff6ff; /* blue-50 */
+            font-weight: bold;
+            color: #1e40af; /* blue-800 */
+            position: relative; /* Kell az X gomb pozícionálásához */
+        }
+         #edit-view table tr:first-child th:first-child {
+             background-color: #eff6ff; /* blue-50 */
+         }
+        #edit-view table td[contenteditable="true"] {
+            background-color: #fff;
+            cursor: text;
+            min-width: 100px; /* Minimum szélesség szerkesztéshez */
+            min-height: 2.5rem; /* Minimum magasság két sorhoz (kb) */
+            line-height: 1.25rem; /* Sor magasság */
+            box-sizing: border-box; /* Padding beleszámít a méretbe */
+            white-space: pre-wrap; /* Megőrzi a sortöréseket és szóközöket */
+            word-break: break-word; /* Sortörés hosszú szavaknál */
+        }
+        #edit-view table td[contenteditable="true"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5); /* blue-500 with opacity */
+        }
+         #edit-view table tr:nth-child(even) td[contenteditable="true"] {
+             background-color: #f9fafb; /* gray-50 */
+         }
+         #edit-view table tr:nth-child(odd) td[contenteditable="true"] {
+             background-color: #fff; /* white */
+         }
+         #edit-view table tr:first-child th {
+             background-color: #eff6ff; /* blue-50 */
+             color: #1e40af; /* blue-800 */
+         }
+         #edit-view table tr td:first-child {
+             background-color: #eff6ff; /* blue-50 */
+             font-weight: bold;
+             color: #1e40af; /* blue-800 */
+         }
+          /* Oszlop szélességek az admin szerkesztőben */
+          #edit-view table th:first-child,
+          #edit-view table td:first-child {
+              width: 50px; /* Keskeny első oszlop */
+              min-width: 50px;
+              max-width: 50px;
+          }
+           #edit-view table th:not(:first-child),
+           #edit-view table td:not(:first-child) {
+               width: auto; /* Automatikus szélesség */
+           }
+
+           /* Oszlop törlés gomb stílus */
+           .remove-column-button {
+               position: absolute;
+               top: 0.2rem;
+               right: 0.2rem;
+               background: none;
+               border: none;
+               color: #ef4444; /* red-500 */
+               font-size: 0.8rem;
+               font-weight: bold;
+               cursor: pointer;
+               padding: 0.1rem;
+               line-height: 1;
+               opacity: 0.5;
+               transition: opacity 0.2s ease-in-out;
+           }
+           .remove-column-button:hover {
+               opacity: 1;
+               color: #dc2626; /* red-600 */
+           }
+           .remove-column-button:disabled {
+               cursor: not-allowed;
+               opacity: 0.2;
+           }
+
+
+        /* Embed nézet stílusok */
+        body.embed-view {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+            display: block !important;
+            overflow-y: auto !important;
+        }
+        body.embed-view #app-header,
+        body.embed-view footer,
+        body.embed-view #announcement-bar { /* Hirdetmény elrejtése az embed nézetben */
+            display: none !important;
+        }
+         body.embed-view #main-content {
+             padding-top: 0 !important;
+             margin-top: 0 !important;
+             padding-bottom: 0 !important;
+         }
+         body.embed-view .container {
+             max-width: none !important; /* Remove max-width for full width */
+             padding: 0 !important; /* Remove padding */
+             margin: 0 !important; /* Remove margin */
+         }
+          body.embed-view #public-embed-view {
+              padding: 0 !important;
+          }
+          body.embed-view #public-embed-view .flex-col {
+              padding: 0 !important;
+          }
+          body.embed-view #public-embed-view .items-center {
+              align-items: flex-start !important; /* Align items to start */
+              text-align: left !important; /* Align text to left */
+          }
+          body.embed-view #public-embed-view .items-center h1,
+          body.embed-view #public-embed-view .items-center p {
+              text-align: left !important;
+              margin-left: 0.5rem; /* Add some left margin */
+              margin-right: 0.5rem; /* Add some right margin */
+          }
+          body.embed-view #public-embed-view .items-center img {
+              margin-left: 0.5rem; /* Add some left margin */
+          }
+          body.embed-view #public-embed-view .overflow-x-auto {
+              overflow-x: auto; /* Keep horizontal scroll for table */
+          }
+
+
+        /* Nagy hiba/infó üzenet stílus */
+        .large-message {
+            font-size: 4vmin; /* Nagy betűméret viewport alapján */
+            font-weight: bold;
+            text-align: center;
+            margin-top: 5vh; /* Függőleges margó viewport alapján */
+            color: #4b5563; /* gray-700 */
+            padding: 0 1rem; /* Kis oldalsó padding */
+        }
+         .large-message .emoji {
+             display: block;
+             font-size: 8vmin; /* Nagy emoji méret viewport alapján */
+             margin-bottom: 2vh; /* Függőleges margó viewport alapján */
+         }
+
+         /* Embed fejléc stílus */
+         .embed-header {
+             background-color: #4f46e5; /* indigo-600 */
+             color: white;
+             padding: 0.75rem 1rem; /* p-3 px-4 */
+             display: flex;
+             align-items: center;
+             justify-content: space-between; /* Space out logo/title and time */
+             gap: 0.75rem; /* space-x-3 */
+             flex-wrap: wrap; /* Allow wrapping on small screens */
+         }
+          .embed-header > div {
+              display: flex;
+              align-items: center;
+              gap: 0.75rem; /* space-x-3 */
+          }
+          .embed-header img {
+              height: 2rem; /* h-8 */
+              width: 2rem; /* w-8 */
+              border-radius: 9999px; /* rounded-full */
+          }
+          .embed-header h1 {
+              font-size: 1.25rem; /* text-xl */
+              font-weight: bold;
+          }
+          .embed-header p {
+              font-size: 0.875rem; /* text-sm */
+              color: #e0e7ff; /* indigo-200 */
+          }
+          /* Idő kijelző stílusa az embed fejlécben */
+          .embed-header #current-time {
+              font-size: 1rem; /* text-base */
+              font-weight: normal;
+              color: #e0e7ff; /* indigo-200 */
+              flex-shrink: 0; /* Prevent shrinking */
+               display: block !important; /* Biztosítsuk, hogy látható legyen az embed fejlécben */
+          }
+
+
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <header id="app-header" class="bg-indigo-600 text-white p-4 shadow-md sticky top-0 z-30">
+        <div class="container mx-auto flex flex-wrap justify-between items-center gap-y-2">
+            <div class="flex items-center space-x-3">
+                 <img src="logo.png" alt="SZAG Logo" class="h-8 w-8 rounded-full" onerror="this.style.display='none'">
+                <h1 class="text-xl font-bold cursor-pointer" onclick="navigateTo('#/')">SZAG Helyettesítések</h1>
+            </div>
+            <nav class="flex items-center space-x-2 sm:space-x-4">
+                <div id="nav-links" class="flex items-center space-x-2 sm:space-x-4">
+                     </div>
+                 <div id="header-right-section" class="flex items-center space-x-4">
+                     <span id="current-time" class="text-sm text-indigo-200 hidden embed-view-element">--:--:--</span> <div id="user-status" class="flex items-center space-x-2">
+                         <span class="text-sm text-indigo-200">Betöltés...</span>
+                     </div>
+                 </div>
+            </nav>
+        </div>
+    </header>
+
+     <div id="announcement-bar" class="hidden container mx-auto mt-2 p-3 text-center text-sm rounded shadow">
+         <span id="announcement-message"></span>
+     </div>
+
+    <main id="main-content" class="container mx-auto mt-4 pb-16">
+         <div id="loading-view" class="flex flex-col justify-center items-center h-64 text-xl text-gray-600">
+             <div class="spinner mb-4"></div>
+             <p>Alkalmazás betöltése...</p>
+         </div>
+         <div id="error-view" class="hidden p-4 text-center text-red-700 bg-red-100 rounded-lg"></div>
+         <div id="public-main-view" class="hidden view-loading px-4"></div>
+         <div id="edit-view" class="hidden view-loading px-4"></div>
+         <div id="admin-view" class="hidden view-loading px-4"></div>
+         <div id="public-embed-view" class="hidden view-loading"></div>
+    </main>
+
+     <div id="login-popup" class="hidden fixed bottom-0 left-0 right-0 bg-gray-800 text-white p-4 shadow-lg z-50 flex justify-center items-center">
+         <p id="login-popup-message" class="mr-4">Ehhez a művelethez bejelentkezés szükséges.</p>
+         <button id="google-login-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded inline-flex items-center transition duration-150 ease-in-out">
+             <svg class="fill-current w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+            <span id="login-button-text">Bejelentkezés iskolai Google-fiókkal</span>
+             <svg id="login-spinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+         </button>
+         <button id="login-popup-close" class="ml-4 text-gray-400 hover:text-white text-2xl leading-none" title="Bezárás">&times;</button>
+     </div>
+
+     <div id="custom-dialog" class="modal-overlay">
+         <div class="modal-content max-w-sm">
+             <p id="custom-dialog-message" class="text-gray-700 mb-4 whitespace-pre-wrap"></p>
+             <div id="custom-dialog-buttons" class="flex justify-end space-x-3"></div>
+         </div>
+     </div>
+
+    <footer class="text-center text-gray-500 text-sm py-4 mt-auto flex items-center justify-center space-x-2">
+        <span>Powered by</span>
+         <img src="logo.png" alt="Logo" class="h-5 w-5 inline-block" onerror="this.style.display='none'">
+        <span>SZAG Helyettesítések &copy; <span id="current-year"></span></span>
+    </footer>
+
+     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // --- Firebase Konfiguráció ---
+        // FIGYELEM: CSERÉLD LE A SAJÁT FIREBASE KONFIGURÁCIÓRA!
+const firebaseConfig = {
+  apiKey: "AIzaSyADjpBI_W3rusRZGWa0_Ao2kjOpSqwbFLo", // CSERÉLD LE!
+  authDomain: "helyettesites-b7af9.firebaseapp.com", // CSERÉLD LE!
+  projectId: "helyettesites-b7af9", // CSERÉLD LE!
+  storageBucket: "helyettesites-b7af9.firebasestorage.app", // CSERÉLD LE!
+  messagingSenderId: "783639694647", // CSERÉLD LE!
+  appId: "1:783639694647:web:5acc97f4b001bd870bdeb2" // CSERÉLD LE!
+};
+
+
+        // --- Globális Változók ---
+        let firebaseApp;
+        let firestore;
+        let auth;
+        let googleProvider;
+        let currentUser = undefined; // undefined: ismeretlen, null: kijelentkezett, {}: bejelentkezett
+        let substitutionData = {}; // Az aktuális nap helyettesítési adatai
+        let allowedUsers = [];
+        let pendingUsers = [];
+        let announcement = ""; // This will only be used in the admin view now
+        let currentView = 'loading';
+        let initialPublicDataLoaded = false;
+        let clockInterval = null;
+        let dayCheckInterval = null;
+        let authStatePromise = null;
+        let adminSelectedDate = formatDateYYYYMMDD(new Date()); // Admin nézetben kiválasztott dátum
+
+        // Firebase listener leiratkozó függvények tárolása
+        let unsubscribePublicListeners = [];
+        let unsubscribeAdminListeners = [];
+
+
+        // --- DOM Elemek Referenciái ---
+        const loadingView = document.getElementById('loading-view');
+        const errorView = document.getElementById('error-view');
+        const publicMainViewDiv = document.getElementById('public-main-view'); // Új ID
+        const editViewDiv = document.getElementById('edit-view'); // Új ID
+        const adminViewDiv = document.getElementById('admin-view');
+        const publicEmbedViewDiv = document.getElementById('public-embed-view'); // Új ID
+        const loginPopup = document.getElementById('login-popup');
+        const googleLoginButton = document.getElementById('google-login-button');
+        const loginButtonText = document.getElementById('login-button-text');
+        const loginSpinner = document.getElementById('login-spinner');
+        const loginPopupCloseButton = document.getElementById('login-popup-close');
+        const loginPopupMessage = document.getElementById('login-popup-message');
+        const userStatusDiv = document.getElementById('user-status');
+        const navLinksDiv = document.getElementById('nav-links');
+        const mainContent = document.getElementById('main-content');
+        const announcementBar = document.getElementById('announcement-bar');
+        const announcementMessageSpan = document.getElementById('announcement-message');
+        const customDialog = document.getElementById('custom-dialog');
+        const customDialogMessage = document.getElementById('custom-dialog-message');
+        const customDialogButtons = document.getElementById('custom-dialog-buttons');
+        let currentTimeSpan = document.getElementById('current-time'); // Idő kijelző elem - LET-re módosítva
+
+
+        // --- Dátum Segédfüggvények ---
+        function formatDateYYYYMMDD(d) { const year = d.getFullYear(); const month = (d.getMonth() + 1).toString().padStart(2, '0'); const day = d.getDate().toString().padStart(2, '0'); return `${year}-${month}-${day}`; }
+        function formatFullDate(d) { return d.toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }); }
+         function getTodayDayName() { const days = ['Vasárnap', 'Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat']; return days[new Date().getDay()]; }
+
+
+        // --- Inicializálás ---
+        function initializeApp() {
+            console.log("initializeApp() called");
+            try {
+                if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+                    throw new Error("Firebase konfiguráció hiányzik vagy nem lett beállítva.");
+                }
+                firebaseApp = firebase.initializeApp(firebaseConfig);
+                firestore = firebase.firestore();
+                auth = firebase.auth();
+                googleProvider = new firebase.auth.GoogleAuthProvider();
+                console.log("Firebase (App, Firestore, Auth) sikeresen inicializálva.");
+                setupEventListeners(); // Eseményfigyelők beállítása
+                setupPublicFirestoreListeners(); // Publikus listenerek beállítása
+                setupAuthListener(); // Auth listener beállítása
+                document.getElementById('current-year').textContent = new Date().getFullYear();
+                startClockAndDayCheck(); // Óra és napváltás figyelő indítása
+                console.log("initializeApp() finished successfully.");
+            } catch (error) {
+                console.error("Firebase inicializálási hiba:", error);
+                showError(`Firebase inicializálása sikertelen: ${error.message}. Kérlek ellenőrizd a konfigurációt.`);
+            }
+        }
+
+        // --- Nézetváltás ---
+        function switchView(viewId) {
+            console.log(`Switching view to: ${viewId}`);
+            // Csak akkor váltsunk, ha tényleg más a nézet, kivéve a loading/error nézeteket
+            if (viewId === currentView && !['loading', 'error'].includes(viewId)) return;
+
+            currentView = viewId;
+
+            const isEmbed = viewId === 'public-embed'; // Embed nézet ellenőrzése
+            document.body.classList.toggle('embed-view', isEmbed);
+
+            // Publikus nézet elemeinek láthatósága a fejlécben (most csak az embed nézet elemeit kezeljük)
+            // Az idő kijelző most már a .embed-header CSS-ben van kezelve, nem itt
+            // const embedViewElements = document.querySelectorAll('.embed-view-element');
+            // embedViewElements.forEach(el => el.classList.toggle('hidden', !isEmbed));
+
+
+            [loadingView, errorView, publicMainViewDiv, editViewDiv, adminViewDiv, publicEmbedViewDiv] // Frissített nézet ID-k
+                 .forEach(el => el?.classList.add('hidden'));
+
+            const viewElement = document.getElementById(`${viewId}-view`);
+            if (viewElement) {
+                viewElement.classList.remove('hidden');
+                if (initialPublicDataLoaded && !['loading', 'error'].includes(viewId)) {
+                    console.log(`Rendering view: ${viewId}`);
+                    renderView();
+                } else if (['loading', 'error'].includes(viewId)) {
+                     console.log(`Displaying special view: ${viewId}`);
+                   } else {
+                     console.log(`View ${viewId} shown, waiting for initial data to render.`);
+                     viewElement.classList.add('view-loading');
+                   }
+            } else {
+                console.error(`View element not found: ${viewId}-view`);
+                showError(`A kért nézet (${viewId}) nem található.`);
+            }
+             updateNavLinks();
+        }
+
+        // --- Útvonal Kezelés ---
+        async function handleRouteChange() {
+            console.log(">>> handleRouteChange() called");
+            const hash = window.location.hash || '#/';
+            console.log("Current hash:", hash);
+
+             // Várjuk meg, amíg az auth state biztosan beállítódik
+             if (currentUser === undefined) {
+                 console.log("Routing skipped: Waiting for auth state...");
+                 if (authStatePromise) {
+                     await authStatePromise;
+                     console.log("Auth state promise resolved in handleRouteChange. Current user:", currentUser);
+                 } else {
+                     console.log("Routing skipped: Auth state promise not yet available.");
+                     return; // Még nem indult el az auth listener
+                 }
+             }
+
+            if (!initialPublicDataLoaded || currentView === 'error') {
+                 console.log("Routing skipped (initial public data not loaded or error state)");
+                 return;
+             }
+
+            let targetView = '';
+
+            if (hash === '#/') targetView = 'public-main'; // Főoldal
+             else if (hash === '#/admin') {
+                 if (currentUser?.isAdmin) {
+                     targetView = 'admin';
+                     if (unsubscribeAdminListeners.length === 0) {
+                         setupAdminFirestoreListeners();
+                     }
+                 } else {
+                     console.warn("Admin access denied.");
+                     if (!currentUser) { showLoginPopup("Az admin felület megtekintéséhez bejelentkezés szükséges."); }
+                     else { showCustomAlert("Nincs jogosultságod az admin felület megtekintéséhez.", "Hiba"); navigateTo('#/'); }
+                     return;
+                 }
+             }
+             else if (hash === '#/edit') { // Szerkesztő nézet
+                 if (currentUser?.isAdmin) {
+                      targetView = 'edit';
+                      if (unsubscribeAdminListeners.length === 0) { // Admin listenerek kellenek a felhasználó listákhoz
+                          setupAdminFirestoreListeners();
+                      }
+                 } else {
+                     console.warn("Edit access denied.");
+                     if (!currentUser) { showLoginPopup("A szerkesztéshez bejelentkezés szükséges."); }
+                     else { showCustomAlert("Nincs jogosultságod a szerkesztéshez.", "Hiba"); navigateTo('#/'); }
+                     return;
+                 }
+             }
+             else if (hash === '#/embed') targetView = 'public-embed'; // Publikus nézet
+            else {
+                targetView = 'public-main'; // Alapértelmezett a főoldal
+                 if (window.location.hash !== '#/') { console.log("Unknown hash, navigating to #/"); navigateTo('#/'); return; }
+            }
+
+            console.log("Routing: Target view determined:", targetView);
+            switchView(targetView);
+        }
+
+        function navigateTo(hash) {
+            console.log("Navigating to:", hash);
+            if (window.location.hash !== hash) {
+                 window.location.hash = hash; // Ez vált hashchange eseményt
+            } else {
+                // Ha az URL ugyanaz, de a nézet más (pl. admin jogosultság hiba után), akkor is frissítünk
+                const targetView = hash.substring(1) || 'public-main'; // Alapértelmezett a főoldal
+                if (currentView !== targetView) {
+                    switchView(targetView);
+                } else {
+                    // Ha az URL és a nézet is ugyanaz, de az adatok már betöltődtek,
+                    // akkor is újrarenderelhetjük a nézetet, hogy biztosan friss legyen.
+                    if (initialPublicDataLoaded && !['loading', 'error'].includes(currentView)) {
+                         console.log("Same hash and view, but re-rendering due to initial data loaded.");
+                         renderView();
+                    }
+                }
+            }
+        }
+
+        // --- Hiba Megjelenítés ---
+        function showError(message) {
+            console.error("Showing error:", message);
+            errorView.textContent = `Hiba: ${message}`;
+            [loadingView, publicMainViewDiv, editViewDiv, adminViewDiv, publicEmbedViewDiv] // Frissített nézet ID-k
+                 .forEach(el => el?.classList.add('hidden'));
+            errorView.classList.remove('hidden');
+            currentView = 'error';
+            initialPublicDataLoaded = true; // Jelöljük, hogy a kezdeti betöltés befejeződött (hibával)
+        }
+
+        // --- Felhasználói Felület Frissítése ---
+        function updateUIBasedOnAuthState(user) {
+             console.log("updateUIBasedOnAuthState called with user:", user ? user.uid : null);
+             currentUser = user; // Fontos: currentUser beállítása itt
+
+            if (user) {
+                 loginPopup.classList.add('hidden');
+                 userStatusDiv.innerHTML = `
+                     <span class="text-sm hidden lg:inline" title="${escapeHtml(user.email)}">${escapeHtml(user.nickname || user.displayName || user.email)} ${user.isAdmin ? '<span class="text-yellow-300">(Admin)</span>' : ''}</span>
+                     <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold py-1 px-2 sm:px-3 rounded transition duration-150 ease-in-out">
+                         Kijelentkezés
+                     </button>
+                 `;
+                 const logoutBtn = document.getElementById('logout-button');
+                 if (logoutBtn) {
+                     // Eseményfigyelő hozzáadása a kijelentkezés gombhoz
+                     logoutBtn.removeEventListener('click', handleLogout); // Biztonsági okból először eltávolítjuk
+                     logoutBtn.addEventListener('click', handleLogout);
+                 }
+                 if (user.isAdmin && unsubscribeAdminListeners.length === 0) {
+                     setupAdminFirestoreListeners();
+                 } else if (!user.isAdmin) {
+                     unsubscribeAdminFirestoreListeners();
+                     allowedUsers = [];
+                     pendingUsers = [];
+                 }
+                  if (initialPublicDataLoaded) {
+                      handleRouteChange(); // Ha az auth state megváltozott, mindig újraértékeljük a routingot/nézetet
+                  }
+                 displayAnnouncement(); // Hirdetmény csak adminnak
+
+            } else { // User is null (logged out)
+                 if (currentUser !== undefined) { // Csak akkor frissítsük, ha nem a kezdeti undefined állapot
+                     userStatusDiv.innerHTML = `<button id="show-login-button" class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-semibold py-1 px-2 sm:px-3 rounded">Bejelentkezés</button>`;
+                     const loginBtn = document.getElementById('show-login-button');
+                     if (loginBtn) {
+                         loginBtn.removeEventListener('click', () => showLoginPopup()); // Biztonsági okból először eltávolítjuk
+                         loginBtn.addEventListener('click', () => showLoginPopup());
+                     }
+                     unsubscribeAdminFirestoreListeners();
+                     allowedUsers = [];
+                     pendingUsers = [];
+                     announcementBar.classList.add('hidden'); // Hirdetmény elrejtése kijelentkezett usernek
+                     // Ha admin vagy edit nézeten volt, és kijelentkezett, irányítsuk a főoldalra
+                     if (currentView === 'admin' || currentView === 'edit') {
+                         navigateTo('#/');
+                     } else if (initialPublicDataLoaded && currentView !== 'loading' && currentView !== 'error') {
+                         renderView(); // Frissítsük a nézetet (gombok letiltása)
+                     }
+                 }
+            }
+             updateNavLinks();
+         }
+
+        function updateNavLinks() {
+            let linksHtml = `
+                 <button onclick="navigateTo('#/')" class="hover:bg-indigo-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'public-main' ? 'bg-indigo-800 font-semibold' : ''}">Főoldal</button>
+            `;
+            if (currentUser?.isAdmin) {
+                 linksHtml += `
+                     <button onclick="navigateTo('#/edit')" class="hover:bg-green-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'edit' ? 'bg-green-800 font-semibold' : 'bg-green-600'}">Szerkesztés</button>
+                     <button onclick="navigateTo('#/admin')" class="hover:bg-purple-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'admin' ? 'bg-purple-800 font-semibold' : 'bg-purple-600'}">Admin</button>
+                 `;
+            }
+             linksHtml += `
+                 <button onclick="navigateTo('#/embed')" class="hover:bg-gray-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'public-embed' ? 'bg-gray-800 font-semibold' : 'bg-gray-600'}">Publikus nézet</button>
+             `;
+            navLinksDiv.innerHTML = linksHtml;
+        }
+
+
+        // --- Renderelő Függvények ---
+        function renderView() {
+            console.log(`Attempting to render view: ${currentView}`);
+            if (!initialPublicDataLoaded && currentView !== 'loading' && currentView !== 'error') {
+                console.log("Render skipped: initial public data not loaded yet.");
+                const viewElement = document.getElementById(`${currentView}-view`);
+                viewElement?.classList.add('view-loading');
+                return;
+            }
+
+            if (!['loading', 'error'].includes(currentView)) {
+                loadingView.classList.add('hidden');
+                errorView.classList.add('hidden');
+            } else { return; }
+
+            const viewElement = document.getElementById(`${currentView}-view`);
+             if (!viewElement) {
+                 console.error(`Render failed: View element ${currentView}-view not found.`);
+                 return;
+             }
+             viewElement.classList.remove('view-loading');
+
+            try {
+                switch (currentView) {
+                    case 'public-main': renderPublicMainView(); break; // Főoldal
+                     case 'edit':
+                         if (currentUser?.isAdmin) renderEditView(); // Szerkesztő nézet
+                         else navigateTo('#/');
+                         break;
+                    case 'admin':
+                         if (currentUser?.isAdmin) renderAdminView(); // Admin nézet
+                         else navigateTo('#/');
+                         break;
+                    case 'public-embed': renderPublicEmbedView(); break; // Publikus nézet
+                    default: navigateTo('#/');
+                }
+                 viewElement.classList.remove('view-loading');
+            } catch (error) {
+                console.error(`Error rendering view ${currentView}:`, error);
+                showError(`Hiba történt a(z) ${currentView} nézet megjelenítésekor: ${error.message}`);
+                 viewElement.classList.remove('view-loading');
+            }
+        }
+
+        /** Főoldal nézet generálása */
+        function renderPublicMainView() {
+            console.log("Rendering Public Main View...");
+            publicMainViewDiv.innerHTML = '';
+
+            const today = new Date();
+            const todayDateString = formatDateYYYYMMDD(today);
+            const todayDayName = getTodayDayName();
+
+            const currentDayData = substitutionData[todayDateString] || { status: 'none', message: '', tableData: [] };
+             // Ensure tableData is an array for rendering, even if empty
+             const tableData = Array.isArray(currentDayData.tableData) ? currentDayData.tableData : [];
+             // Ensure columns array exists for rendering, even if empty
+             const columns = Array.isArray(currentDayData.columns) ? currentDayData.columns : ["Helyettesített", "Helyettesítő", "Terem/Megjegyzés", "Egyéb"]; // Default headers for public view
+
+
+            let mainHTML = `
+                 <div class="flex flex-col items-center justify-center p-4">
+                     <div class="flex items-center space-x-4 mb-4">
+                          <img src="logo.png" alt="SZAG Logo" class="h-16 w-16 rounded-full" onerror="this.style.display='none'">
+                         <div class="flex flex-col">
+                             <h1 class="text-3xl font-bold text-indigo-700">SZAG Helyettesítések</h1>
+                             <p class="text-xl text-gray-700">${formatFullDate(today)}</p>
+                         </div>
+                     </div>
+
+                     <div class="w-full max-w-4xl overflow-x-auto shadow-md rounded-lg border border-gray-200 bg-white p-4">
+                         ${currentDayData.status === 'none' ?
+                             `<div class="large-message"><span class="emoji">✅</span>Nincsenek helyettesítések erre a napra.</div>`
+                         : currentDayData.status === 'whiteboard' ?
+                             `<div class="large-message"><span class="emoji">ℹ️</span>${escapeHtml(currentDayData.message || 'Technikai okok miatt a helyettesítések a fehér táblán találhatók.')}</div>`
+                         : currentDayData.status === 'available' && tableData.length > 0 && columns.length > 0 ?
+                             `
+                             <table id="main-substitutions-table" class="min-w-full divide-y divide-gray-200">
+                                 <thead>
+                                     <tr>
+                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Óra</th>
+                                         ${columns.map(header => `
+                                             <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">${escapeHtml(header)}</th>
+                                         `).join('')}
+                                     </tr>
+                                 </thead>
+                                 <tbody class="bg-white divide-y divide-gray-200">
+                                     ${tableData.map((rowData, index) => `
+                                         <tr>
+                                             <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}.</td>
+                                             ${columns.map((header, colIndex) => `
+                                                 <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-700">${escapeHtml(rowData[`col${colIndex + 1}`] || '')}</td>
+                                             `).join('')}
+                                         </tr>
+                                     `).join('')}
+                                 </tbody>
+                             </table>
+                             `
+                         :
+                             `<div class="large-message"><span class="emoji">🤷‍♀️</span>Nincsenek helyettesítési adatok ehhez a naphoz.</div>`
+                         }
+                     </div>
+                 </div>
+            `;
+            publicMainViewDiv.innerHTML = mainHTML;
+        }
+
+        /** Adminisztrációs felület generálása (Felhasználók, Hirdetmény, Link) */
+        function renderAdminView() {
+             if (currentUser === undefined) {
+                 console.log("Admin view render skipped: currentUser is undefined.");
+                 adminViewDiv.innerHTML = '<div class="p-4 text-center text-gray-500">Admin adatok betöltése...</div>';
+                 return;
+             }
+             if (!currentUser?.isAdmin) return navigateTo('#/');
+
+            console.log("Rendering Admin View...");
+            adminViewDiv.innerHTML = '';
+
+            let adminHTML = `
+                 <div class="p-4 md:p-6 bg-white rounded-lg shadow space-y-8 relative">
+                     <div id="admin-action-overlay" class="hidden flex-col"><div class="spinner"></div> <span class="ml-3 text-gray-700">Folyamatban...</span></div>
+                     <h2 class="text-2xl font-bold text-center text-indigo-700">SZAG Helyettesítések Adminisztráció</h2>
+
+                     <section>
+                         <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Felhasználók Kezelése</h3>
+                         <ul id="admin-users-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto border rounded p-2">${allowedUsers.length === 0 ? '<li class="text-gray-500 italic">Nincsenek engedélyezett felhasználók.</li>' : allowedUsers.map(allowedUser => `<li data-id="${allowedUser.id}" data-email="${escapeHtml(allowedUser.email)}" data-isadmin="${allowedUser.isAdmin}" data-nickname="${escapeHtml(allowedUser.nickname || '')}" class="flex flex-wrap justify-between items-center p-2 border-b last:border-b-0 gap-2"><div class="flex-grow"><span class="text-sm font-medium">${escapeHtml(allowedUser.nickname || allowedUser.email || 'N/A')}</span>${allowedUser.nickname ? `<span class="text-xs text-gray-500 block">(${escapeHtml(allowedUser.email || 'N/A')})</span>` : ''}<span class="text-xs text-gray-500 block break-all">UID: ${allowedUser.id}</span></div><div class="flex space-x-2 flex-shrink-0 items-center">${allowedUser.isAdmin ? '<span class="font-bold text-purple-700 text-xs mr-2">(Admin)</span>' : ''}<button data-action="edit-user" class="admin-action-button text-xs px-2 py-1 rounded bg-gray-500 hover:bg-gray-600 text-white">Név Szerk.</button><button data-action="toggle-admin" class="admin-action-button text-xs px-2 py-1 rounded ${allowedUser.isAdmin ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white ${allowedUser.id === currentUser.uid ? 'opacity-50 cursor-not-allowed' : ''}" ${allowedUser.id === currentUser.uid ? 'disabled' : ''}>${allowedUser.isAdmin ? 'Admin Elvétel' : 'Admin Adás'}</button><button data-action="delete-user" class="admin-action-button text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 ${allowedUser.id === currentUser.uid ? 'opacity-50 cursor-not-allowed' : ''}" ${allowedUser.id === currentUser.uid ? 'disabled' : ''}>Eltávolít</button></div></li>`).join('')}</ul>
+                         <h4 class="text-lg font-semibold mb-3 text-gray-800 border-b pb-2">Meghívott Felhasználók (Email Alapú)</h4>
+                         <ul id="admin-pending-users-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto border rounded p-2">
+                             ${pendingUsers.length === 0 ? '<li class="text-gray-500 italic">Nincsenek meghívott felhasználók.</li>' :
+                                 pendingUsers.map(pending => `
+                                 <li data-email="${escapeHtml(pending.id)}" data-isadmin="${pending.isAdmin}" data-nickname="${escapeHtml(pending.nickname || '')}" class="flex flex-wrap justify-between items-center p-2 border-b last:border-b-0 gap-2">
+                                     <div class="flex-grow">
+                                         <span class="text-sm font-medium">${escapeHtml(pending.nickname || pending.id)}</span>
+                                         ${pending.nickname ? `<span class="text-xs text-gray-500 block">(${escapeHtml(pending.id)})</span>` : ''}
+                                     </div>
+                                     <div class="flex space-x-2 flex-shrink-0 items-center">
+                                         ${pending.isAdmin ? '<span class="font-bold text-purple-700 text-xs mr-2">(Adminnak meghívva)</span>' : '<span class="text-xs text-gray-500 mr-2">(Felhasználónak meghívva)</span>'}
+                                         <button data-action="edit-pending" class="admin-action-button text-xs px-2 py-1 rounded bg-gray-500 hover:bg-gray-600 text-white">Szerkeszt</button>
+                                         <button data-action="delete-pending" class="admin-action-button text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50">Meghívás Törlése</button>
+                                     </div>
+                                 </li>`).join('')
+                             }
+                         </ul>
+                         <div class="flex flex-col sm:flex-row items-end space-y-2 sm:space-y-0 sm:space-x-2 border-t pt-4">
+                             <div class="flex-grow w-full sm:w-1/3">
+                                 <label for="newPendingUserEmail" class="block text-sm font-medium text-gray-700 mb-1">Új felhasználó Email címe:</label>
+                                 <input type="email" id="newPendingUserEmail" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="user@example.com">
+                             </div>
+                              <div class="flex-grow w-full sm:w-1/3">
+                                 <label for="newPendingUserNickname" class="block text-sm font-medium text-gray-700 mb-1">Megj. név/Becenév (opc.):</label>
+                                 <input type="text" id="newPendingUserNickname" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. Kovács János">
+                              </div>
+                             <div class="flex items-center h-10 pt-2 sm:pt-0">
+                                 <input type="checkbox" id="newPendingUserIsAdmin" class="admin-input mr-2 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                 <label for="newPendingUserIsAdmin" class="text-sm font-medium text-gray-700">Legyen Admin?</label>
+                             </div>
+                             <button id="add-pending-user-button" data-action="add-pending" class="admin-action-button px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150 h-10 w-full sm:w-auto">Meghívás</button>
+                         </div>
+                         <p class="text-xs text-gray-500 mt-2">A felhasználó az első bejelentkezése után kapja meg a jogosultságot.</p>
+                     </section>
+
+                     <section>
+                         <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Hirdetmény/Üzenet a Főoldalra (Adminoknak látható)</h3>
+                         <textarea id="admin-announcement" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" rows="3" placeholder="Írj ide egy rövid üzenetet... (üresen hagyva törlődik)">${escapeHtml(announcement)}</textarea>
+                         <div class="text-right mt-2">
+                             <button id="save-announcement-button" data-action="save-announcement" class="admin-action-button px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">Üzenet Mentése</button>
+                         </div>
+                     </section>
+
+                     <section>
+                         <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Publikus nézet Link</h3>
+                         <p class="text-gray-700">Használd ezt a linket a helyettesítések beágyazásához (pl. iskola honlapjára):</p>
+                         <input type="text" value="${window.location.origin}${window.location.pathname}#/embed" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 mt-2 text-gray-600 text-sm" onclick="this.select();">
+                     </section>
+
+                 </div>
+            `;
+            adminViewDiv.innerHTML = adminHTML;
+
+             // Frissítsük az admin loading státuszt, ha éppen fut valami
+             setAdminLoading(false); // Alapértelmezésben nem tölt
+        }
+
+        /** Admin szerkesztő nézet generálása (Táblázat, Dátum, Státusz, Üzenet) */
+        function renderEditView() {
+             if (currentUser === undefined) {
+                 console.log("Edit view render skipped: currentUser is undefined.");
+                 editViewDiv.innerHTML = '<div class="p-4 text-center text-gray-500">Adatok betöltése a szerkesztéshez...</div>';
+                 return;
+             }
+             if (!currentUser?.isAdmin) return navigateTo('#/');
+
+            console.log("Rendering Edit View...");
+            editViewDiv.innerHTML = '';
+
+            // Mindig a globális substitutionData objektumot használjuk a rendereléshez
+            const selectedDateData = substitutionData[adminSelectedDate] || { status: 'none', message: '', columns: [], tableData: Array(8).fill({}) };
+             // Ensure columns is an array and defaults to 4 empty strings if empty
+             if (!Array.isArray(selectedDateData.columns) || selectedDateData.columns.length === 0) {
+                 selectedDateData.columns = ["", "", "", ""]; // Default 4 empty columns
+             }
+             // Ensure tableData is an array of 8 objects
+             if (!Array.isArray(selectedDateData.tableData) || selectedDateData.tableData.length !== 8) {
+                 selectedDateData.tableData = Array(8).fill({});
+             }
+             // Ensure each row has data for each column, using || '' for display
+             selectedDateData.tableData = selectedDateData.tableData.map(row => {
+                 const newRow = {};
+                 selectedDateData.columns.forEach((col, index) => {
+                     const colKey = `col${index + 1}`;
+                     newRow[colKey] = row[colKey] || ''; // Use || '' for display
+                 });
+                 return newRow;
+             });
+
+
+            let editHTML = `
+                 <div class="p-4 md:p-6 bg-white rounded-lg shadow space-y-8 relative">
+                     <div id="admin-action-overlay" class="hidden flex-col"><div class="spinner"></div> <span class="ml-3 text-gray-700">Folyamatban...</span></div>
+                     <h2 class="text-2xl font-bold text-center text-indigo-700">Helyettesítések Szerkesztése</h2>
+
+                     <section class="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-4 border-b pb-4">
+                         <div class="flex items-center space-x-2">
+                             <label for="admin-date-picker" class="font-semibold text-gray-700">Dátum:</label>
+                             <input type="date" id="admin-date-picker" class="admin-input px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" value="${adminSelectedDate}">
+                         </div>
+                         <div class="flex items-center space-x-2">
+                             <label for="admin-status-select" class="font-semibold text-gray-700">Státusz:</label>
+                             <select id="admin-status-select" class="admin-input px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                 <option value="none" ${selectedDateData.status === 'none' ? 'selected' : ''}>Nincsenek helyettesítések</option>
+                                 <option value="whiteboard" ${selectedDateData.status === 'whiteboard' ? 'selected' : ''}>Fehér táblán találhatók</option>
+                                 <option value="available" ${selectedDateData.status === 'available' ? 'selected' : ''}>Vannak helyettesítések</option>
+                             </select>
+                         </div>
+                         ${selectedDateData.status === 'available' ?
+                             `<button id="save-substitutions-button" data-action="save-substitutions" class="admin-action-button px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">Mentés</button>`
+                             : ''
+                         }
+                     </section>
+
+                     <section id="admin-table-section" class="${selectedDateData.status === 'available' ? '' : 'hidden'}">
+                         <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Helyettesítési Táblázat</h3>
+                          <div class="mb-4 ${selectedDateData.status === 'whiteboard' ? '' : 'hidden'}"> <label for="admin-message" class="block text-sm font-medium text-gray-700 mb-1">Üzenet (ha státusz "Fehér táblán találhatók"):</label>
+                             <input type="text" id="admin-message" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. Technikai okok miatt..." value="${escapeHtml(selectedDateData.message || '')}">
+                          </div>
+                         <div class="overflow-x-auto shadow-md rounded-lg border border-gray-200">
+                             <table id="admin-substitutions-table" class="min-w-full divide-y divide-gray-200">
+                                 <thead>
+                                     <tr>
+                                         <th>Óra</th>
+                                         ${selectedDateData.columns.map((header, index) => `
+                                             <th contenteditable="true" data-col-index="${index}">${escapeHtml(header)}<button class="remove-column-button" data-col-index="${index}" title="Oszlop törlése (csak erre a napra)">X</button></th>
+                                         `).join('')}
+                                     </tr>
+                                 </thead>
+                                 <tbody class="bg-white divide-y divide-gray-200">
+                                     ${selectedDateData.tableData.map((rowData, rowIndex) => `
+                                         <tr>
+                                             <td>${rowIndex + 1}.</td>
+                                             ${selectedDateData.columns.map((header, colIndex) => {
+                                                 const colKey = `col${colIndex + 1}`;
+                                                 return `<td contenteditable="true" data-row-index="${rowIndex}" data-col-index="${colIndex}">${escapeHtml(rowData[colKey] || '')}</td>`; // Use || '' for display
+                                             }).join('')}
+                                         </tr>
+                                     `).join('')}
+                                 </tbody>
+                             </table>
+                         </div>
+                         <div class="flex justify-end items-center mt-4"> <button id="add-column-button" class="admin-action-button px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150">Oszlop hozzáadása</button>
+                         </div>
+                     </section>
+                 </div>
+            `;
+            editViewDiv.innerHTML = editHTML;
+
+             // Frissítsük az admin loading státuszt, ha éppen fut valami
+             setAdminLoading(false); // Alapértelmezésben nem tölt
+        }
+
+
+         /** Publikus embed nézet generálása */
+         function renderPublicEmbedView() {
+             console.log("Rendering Public Embed View...");
+             publicEmbedViewDiv.innerHTML = '';
+
+             const today = new Date();
+             const todayDateString = formatDateYYYYMMDD(today);
+             const todayDayName = getTodayDayName();
+
+             const currentDayData = substitutionData[todayDateString] || { status: 'none', message: '', tableData: [] };
+             // Ensure tableData is an array for rendering, even if empty
+             const tableData = Array.isArray(currentDayData.tableData) ? currentDayData.tableData : [];
+             // Ensure columns array exists for rendering, even if empty
+             const columns = Array.isArray(currentDayData.columns) ? currentDayData.columns : ["Helyettesített", "Helyettesítő", "Terem/Megjegyzés", "Egyéb"]; // Default headers for public view
+
+
+             let embedHTML = `
+                  <div class="embed-header">
+                     <div>
+                      <img src="logo.png" alt="SZAG Logo" onerror="this.style.display='none'">
+                      <div class="flex flex-col">
+                          <h1 class="text-xl font-bold">SZAG Helyettesítések</h1>
+                          <p class="text-sm text-indigo-200">${formatFullDate(today)}</p>
+                      </div>
+                     </div>
+                     <span id="current-time" class="embed-view-element">--:--:--</span> </div>
+
+                  <div class="w-full overflow-x-auto p-2">
+                     ${currentDayData.status === 'none' ?
+                         `<div class="large-message"><span class="emoji">✅</span>Nincsenek helyettesítések erre a napra.</div>`
+                     : currentDayData.status === 'whiteboard' ?
+                         `<div class="large-message"><span class="emoji">ℹ️</span>${escapeHtml(currentDayData.message || 'Technikai okok miatt a helyettesítések a fehér táblán találhatók.')}</div>`
+                     : currentDayData.status === 'available' && tableData.length > 0 && columns.length > 0 ?
+                         `
+                         <table id="embed-substitutions-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+                             <thead>
+                                 <tr>
+                                     <th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Óra</th>
+                                      ${columns.map(header => `
+                                         <th class="px-2 py-1 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">${escapeHtml(header)}</th>
+                                     `).join('')}
+                                 </tr>
+                             </thead>
+                             <tbody class="bg-white divide-y divide-gray-200 text-gray-700 text-sm">
+                                  ${tableData.map((rowData, index) => `
+                                     <tr>
+                                         <td class="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}.</td>
+                                          ${columns.map((header, colIndex) => {
+                                              const colKey = `col${colIndex + 1}`;
+                                              return `<td class="px-2 py-1 whitespace-nowrap">${escapeHtml(rowData[colKey] || '')}</td>`;
+                                          }).join('')}
+                                     </tr>
+                                 `).join('')}
+                             </tbody>
+                         </table>
+                         `
+                     :
+                         `<div class="large-message"><span class="emoji">🤷‍♀️</span>Nincsenek helyettesítési adatok ehhez a napra.</div>`
+                     }
+                  </div>
+             `;
+             publicEmbedViewDiv.innerHTML = embedHTML;
+              // Update the currentTimeSpan reference after rendering
+             currentTimeSpan = document.getElementById('current-time');
+             console.log("Updated currentTimeSpan reference in renderPublicEmbedView:", currentTimeSpan);
+         }
+
+
+        // --- Segédfüggvények ---
+        function escapeHtml(unsafe) { return unsafe ? unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : ''; }
+        // function escapeJsString(unsafe) { return unsafe ? unsafe.toString().replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n') : '';} // Nem kell foglalás modalhoz
+
+        // --- Firebase Hitelesítés ---
+        function setupAuthListener() {
+             console.log("setupAuthListener() called");
+             if (!auth) return showError("Auth szolgáltatás nem inicializálódott.");
+             authStatePromise = new Promise((resolve) => {
+                 const unsubscribe = auth.onAuthStateChanged(async (user) => {
+                     console.log(">>> onAuthStateChanged triggered. User:", user ? user.uid : 'null');
+                     let resolvedUser = null;
+                     if (user) {
+                         console.log("User signed in, checking authorization for UID:", user.uid);
+                         const userDocRef = firestore.collection('allowedUsers').doc(user.uid);
+                         try {
+                             console.log("Attempting to get user document from allowedUsers...");
+                             const userDoc = await userDocRef.get();
+                             if (userDoc.exists) {
+                                 console.log("User found in allowedUsers. Data:", userDoc.data());
+                                 const userData = userDoc.data();
+                                 resolvedUser = { uid: user.uid, displayName: user.displayName, email: user.email, isAdmin: userData.isAdmin || false, nickname: userData.nickname || null };
+                             } else {
+                                 console.log("User not in allowedUsers, checking pendingUsers for email:", user.email.toLowerCase());
+                                 const pendingUserDocRef = firestore.collection('pendingUsers').doc(user.email.toLowerCase());
+                                 const pendingDoc = await pendingUserDocRef.get();
+                                 if (pendingDoc.exists) {
+                                     console.log("User found in pendingUsers. Data:", pendingDoc.data());
+                                     const pendingData = pendingDoc.data();
+                                     resolvedUser = { uid: user.uid, displayName: user.displayName, email: user.email, isAdmin: pendingData.isAdmin || false, nickname: pendingData.nickname || null };
+                                     const batch = firestore.batch();
+                                     batch.set(userDocRef, { email: user.email.toLowerCase(), isAdmin: resolvedUser.isAdmin, nickname: resolvedUser.nickname });
+                                     batch.delete(pendingUserDocRef);
+                                     console.log("Attempting to commit batch: add to allowedUsers, delete from pendingUsers");
+                                     await batch.commit();
+                                     console.log("User successfully migrated from pending to allowed.");
+                                 } else {
+                                     console.warn("User not found in pendingUsers either. Access denied:", user.email);
+                                     showCustomAlert(`Hozzáférés megtagadva ehhez az email címhez: ${user.email}. Kérj meghívót egy adminisztrátortól.`, "Hiba");
+                                     await auth.signOut().catch(e => console.error("Sign out failed:", e));
+                                     resolvedUser = null;
+                                 }
+                             }
+                         } catch (error) {
+                             console.error("Error checking user authorization:", error);
+                             showError("Hiba történt a felhasználói jogosultság ellenőrzésekor.");
+                             await auth.signOut().catch(e => console.error("Sign out failed:", e));
+                             resolvedUser = null;
+                         }
+                     } else {
+                          console.log("User signed out.");
+                          resolvedUser = null;
+                      }
+                     updateUIBasedOnAuthState(resolvedUser);
+                     unsubscribe(); // Leiratkozás az első state change után
+                     resolve(); // Promise feloldása
+                 });
+             });
+         }
+
+        function handleGoogleLogin() {
+            if (!auth || !googleProvider) return showError("Auth szolgáltatás nem inicializálódott.");
+            googleLoginButton.disabled = true;
+            loginSpinner.classList.remove('hidden');
+            loginButtonText.textContent = 'Bejelentkezés...';
+            auth.signInWithPopup(googleProvider)
+                 .catch((error) => {
+                     console.error("Google Sign-In Error:", error);
+                     if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+                         showCustomAlert(`Hiba a Google bejelentkezés során: ${error.message}`, "Hiba");
+                     }
+                 })
+                 .finally(() => {
+                     // Csak akkor állítsuk vissza a gombot, ha a popup még látható
+                     if (loginPopup && !loginPopup.classList.contains('hidden')) {
+                         googleLoginButton.disabled = false;
+                         loginSpinner.classList.add('hidden');
+                         loginButtonText.textContent = 'Bejelentkezés iskolai Google-fiókkal';
+                     }
+                 });
+        }
+
+         function handleLogout() {
+              if (!auth) return;
+              console.log("Logging out...");
+              // Nincs jogosultság ellenőrzés a kijelentkezéshez, ez mindig engedélyezett
+              auth.signOut().catch((error) => {
+                  console.error("Logout failed:", error);
+                  showCustomAlert("Hiba történt a kijelentkezés során.", "Hiba");
+              });
+          }
+
+
+        // --- Firestore Listeners ---
+        function setupPublicFirestoreListeners() {
+             if (!firestore) { console.log("Skipping public Firestore listeners: no firestore."); return; }
+             if (unsubscribePublicListeners.length > 0) { console.log("Public listeners already running."); return; }
+
+            console.log("Setting up PUBLIC Firestore listeners...");
+            unsubscribePublicListeners = [];
+            initialPublicDataLoaded = false;
+            let listenersPending = 2; // substitutionData, announcement (cancellations listener removed)
+
+            function checkInitialLoadComplete() {
+                listenersPending--;
+                console.log(`Listener responded. Pending: ${listenersPending}`);
+                if (listenersPending <= 0 && !initialPublicDataLoaded) {
+                    console.log("All initial PUBLIC Firestore data loaded or errored.");
+                    initialPublicDataLoaded = true;
+                    loadingView.classList.add('hidden');
+                    handleRouteChange(); // Kezdő nézet betöltése
+                }
+            }
+
+            try {
+                 // Helyettesítési adatok figyelése
+                 const substitutionsRef = firestore.collection('substitutions');
+                 const unsubSubstitutions = substitutionsRef.onSnapshot((snapshot) => {
+                     substitutionData = {};
+                     snapshot.docs.forEach(doc => {
+                         substitutionData[doc.id] = doc.data();
+                     });
+                     console.log("Public Substitution Data updated:", Object.keys(substitutionData).length, "days");
+                     checkInitialLoadComplete();
+                     // Mindig frissítsük a nézetet, ha az adatok frissülnek és a kezdeti betöltés kész
+                     if (initialPublicDataLoaded) {
+                         console.log("Substitution data updated, re-rendering current view.");
+                         // Csak akkor rendereljük újra a publikus nézeteket, ha azok aktívak
+                         if (currentView === 'public-main' || currentView === 'public-embed') {
+                             renderView();
+                         }
+                         // Az admin/edit nézeteket az admin listenerek frissítik
+                     }
+                 }, (error) => {
+                     console.error("Error fetching public substitutions:", error);
+                     showError("Hiba a helyettesítési adatok betöltésekor.");
+                     checkInitialLoadComplete();
+                 });
+                 unsubscribePublicListeners.push(unsubSubstitutions);
+
+
+                 // Hirdetmény figyelése
+                 const announcementRef = firestore.collection('config').doc('announcement');
+                 const unsubAnnouncement = announcementRef.onSnapshot((doc) => {
+                     announcement = doc.exists ? (doc.data().message || "") : "";
+                     console.log("announcement updated:", announcement);
+                     checkInitialLoadComplete();
+                     if (initialPublicDataLoaded) displayAnnouncement(); // Hirdetményt csak admin nézetben jelenítjük meg
+                 }, (error) => {
+                     console.error("Error fetching announcement:", error);
+                     announcement = "";
+                     checkInitialLoadComplete();
+                      if (initialPublicDataLoaded) displayAnnouncement();
+                 });
+                 unsubscribePublicListeners.push(unsubAnnouncement);
+
+                 // Cancellations figyelése (ELTÁVOLÍTVA)
+                 // const cancellationsRef = firestore.collection('cancellations');
+                 // const unsubCancellations = cancellationsRef.onSnapshot((snapshot) => {
+                 //     console.log("Public Cancellations updated (ignored):", snapshot.docs.length);
+                 //     checkInitialLoadComplete();
+                 // }, (error) => { console.error("Error fetching cancellations:", error); checkInitialLoadComplete(); });
+                 // unsubscribePublicListeners.push(unsubCancellations);
+
+
+            } catch (error) {
+                 console.error("Error setting up public Firestore listeners:", error);
+                 showError("Hiba az adatbázis figyelőinek beállításakor.");
+                 listenersPending = 0; // Ensure initial load check completes even on error
+                 checkInitialLoadComplete();
+             }
+        }
+
+        function setupAdminFirestoreListeners() {
+             if (!firestore || !currentUser?.isAdmin) { console.log("Skipping admin Firestore listeners: no firestore or not admin."); return; }
+             if (unsubscribeAdminListeners.length > 0) { console.log("Admin listeners already running."); return; }
+             console.log("Setting up ADMIN Firestore listeners...");
+             unsubscribeAdminListeners = []; // Biztos, ami biztos, újra inicializáljuk
+
+             const allowedUsersRef = firestore.collection('allowedUsers').orderBy('email');
+             const unsubAllowedUsers = allowedUsersRef.onSnapshot((snapshot) => {
+                 allowedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                 console.log("Allowed users updated:", allowedUsers.length);
+                 // Frissítsük mindkét admin nézetet, ha aktívak
+                 if (initialPublicDataLoaded && currentView === 'admin') renderAdminView();
+                 // Az edit nézetet a substitutionData listener frissíti, de a felhasználó listák kellenek hozzá
+                 if (initialPublicDataLoaded && currentView === 'edit') renderEditView(); // Újrarendereljük az edit nézetet is, ha a felhasználó listák változnak
+             }, (error) => { console.error("Error fetching allowed users:", error); });
+             unsubscribeAdminListeners.push(unsubAllowedUsers);
+
+             const pendingUsersRef = firestore.collection('pendingUsers');
+             const unsubPendingUsers = pendingUsersRef.onSnapshot((snapshot) => {
+                 pendingUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                 console.log("Pending users updated:", pendingUsers.length);
+                 // Frissítsük mindkét admin nézetet, ha aktívak
+                 if (initialPublicDataLoaded && currentView === 'admin') renderAdminView();
+                 // Az edit nézetet a substitutionData listener frissíti, de a felhasználó listák kellenek hozzá
+                 if (initialPublicDataLoaded && currentView === 'edit') renderEditView(); // Újrarendereljük az edit nézetet is, ha a felhasználó listák változnak
+             }, (error) => { console.error("Error fetching pending users:", error); });
+             unsubscribeAdminListeners.push(unsubPendingUsers);
+
+              // Helyettesítési adatok figyelése az admin/edit nézetben (ez a listener frissíti az edit nézetet)
+              const adminSubstitutionsRef = firestore.collection('substitutions');
+              const unsubAdminSubstitutions = adminSubstitutionsRef.onSnapshot((snapshot) => {
+                  // Itt NEM írjuk felül a globális substitutionData objektumot,
+                  // csak frissítjük a releváns nap adatait, hogy a nem mentett változások megmaradjanak.
+                  snapshot.docChanges().forEach(change => {
+                      const docId = change.doc.id;
+                      if (change.type === "added" || change.type === "modified") {
+                          // Csak akkor frissítjük a globális objektumot, ha az adott nap adatai változtak
+                          // VAGY ha az a nap az adminSelectedDate
+                          // VAGY ha az a mai nap (hogy a publikus nézetek is frissüljenek)
+                          const todayDateString = formatDateYYYYMMDD(new Date());
+                          // Deep comparison to avoid unnecessary re-renders if data is the same
+                          const isDataChanged = substitutionData[docId] === undefined || JSON.stringify(substitutionData[docId]) !== JSON.stringify(change.doc.data());
+
+                          if (isDataChanged || docId === adminSelectedDate || docId === todayDateString) {
+                               console.log(`Admin Substitution Data updated from Firestore for date ${docId}. Data changed: ${isDataChanged}`);
+                               substitutionData[docId] = change.doc.data();
+                               // Ha az aktuálisan szerkesztett nap adatai frissültek, újrarendereljük a szerkesztő nézetet
+                               if (initialPublicDataLoaded && currentView === 'edit' && docId === adminSelectedDate) {
+                                   console.log("Edited date data updated from Firestore, re-rendering edit view.");
+                                   renderEditView(); // Újrarendereljük az edit nézetet
+                               } else if (initialPublicDataLoaded && (currentView === 'public-main' || currentView === 'public-embed') && docId === todayDateString) {
+                                    // Ha a mai nap adatai frissültek, újrarendereljük a publikus nézetet is.
+                                     console.log("Today's substitution data updated, re-rendering public view.");
+                                     renderView(); // renderView() fogja eldönteni, melyik publikus nézetet renderelje
+                               }
+                          }
+                      } else if (change.type === "removed") {
+                          // Ha egy dokumentum törlődött, töröljük a globális objektumból is
+                          if (substitutionData[docId] !== undefined) {
+                              console.log(`Admin Substitution Data removed for date ${docId}`);
+                              delete substitutionData[docId];
+                              // Ha az aktuálisan szerkesztett nap törlődött, újrarendereljük a szerkesztő nézetet
+                              if (initialPublicDataLoaded && currentView === 'edit' && docId === adminSelectedDate) {
+                                   console.log("Edited date data removed from Firestore, re-rendering edit view.");
+                                   renderEditView(); // Újrarendereljük az edit nézetet
+                               } else {
+                                   // Ha egy másik nap törlődött, ami érinti a publikus nézetet (pl. mai nap),
+                                   // akkor újrarendereljük a publikus nézetet is.
+                                    const todayDateString = formatDateYYYYMMDD(new Date());
+                                    if (docId === todayDateString) {
+                                        console.log("Today's substitution data removed, re-rendering public view.");
+                                        renderView(); // renderView() fogja eldönteni, melyik publikus nézetet renderelje
+                                    }
+                               }
+                          }
+                      }
+                  });
+              }, (error) => { console.error("Error fetching admin substitutions:", error); });
+              unsubscribeAdminListeners.push(unsubAdminSubstitutions);
+
+         }
+
+        function unsubscribeFirestoreListeners() {
+             console.log(`Unsubscribing ${unsubscribePublicListeners.length} public and ${unsubscribeAdminListeners.length} admin listeners.`);
+             [...unsubscribePublicListeners, ...unsubscribeAdminListeners].forEach(unsub => unsub());
+             unsubscribePublicListeners = [];
+             unsubscribeAdminListeners = [];
+         }
+         function unsubscribeAdminFirestoreListeners() {
+              console.log(`Unsubscribing ${unsubscribeAdminListeners.length} admin listeners.`);
+              unsubscribeAdminListeners.forEach(unsub => unsub());
+              unsubscribeAdminListeners = [];
+          }
+
+
+        // --- Admin Műveletek ---
+
+         // Admin dátumválasztó kezelése
+         function handleAdminDateChange(event) {
+             adminSelectedDate = event.target.value;
+             console.log("Admin selected date changed to:", adminSelectedDate);
+             // Dátumváltáskor újrarendereljük a szerkesztő nézetet
+             if (currentView === 'edit') {
+                 renderEditView();
+             }
+         }
+
+         // Admin státuszválasztó kezelése
+         function handleAdminStatusChange(event) {
+             const newStatus = event.target.value;
+             const adminMessageInput = document.getElementById('admin-message');
+             const adminTableSection = document.getElementById('admin-table-section');
+             const adminMessageSection = editViewDiv.querySelector('.mb-4'); // Üzenet szekció
+             // Mentés gomb referenciáját nem kell itt lekérni, mert a renderEditView újra generálja
+
+             // Engedélyezzük/Letiltjuk az üzenet mezőt és a táblázatot a státusz alapján
+             if (adminMessageInput) adminMessageInput.disabled = newStatus !== 'whiteboard';
+             if (adminTableSection) adminTableSection.classList.toggle('hidden', newStatus !== 'available');
+             if (adminMessageSection) adminMessageSection.classList.toggle('hidden', newStatus !== 'whiteboard'); // Üzenet szekció megjelenítése/elrejtése
+
+
+             // Frissítjük a substitutionData objektumot az új státusszal
+             const currentDayData = substitutionData[adminSelectedDate] || { status: 'none', message: '', columns: [], tableData: Array(8).fill({}) }; // Alapértelmezett oszlopok üresek
+             currentDayData.status = newStatus;
+
+             // Itt nem töröljük a tableData-t vagy message-t, csak mentéskor
+             // substitutionData[adminSelectedDate] = currentDayData; // Frissítjük a globális adatot
+
+             console.log("Admin status changed locally:", newStatus);
+             // Mindig újrarendereljük a teljes nézetet, hogy a Mentés gomb helyesen jelenjen meg/tűnjön el
+             renderEditView();
+         }
+
+         // Admin üzenet mező input kezelése
+         function handleAdminMessageInput(event) {
+             const newMessage = event.target.value; // Ne töröljük a whitespace-t itt, csak mentéskor
+             const currentDayData = substitutionData[adminSelectedDate] || { status: 'none', message: '', columns: [], tableData: Array(8).fill({}) }; // Alapértelmezett oszlopok üresek
+             currentDayData.message = newMessage; // Üres string is lehet
+             substitutionData[adminSelectedDate] = currentDayData;
+             console.log("Admin message updated locally:", currentDayData.message);
+         }
+
+
+         // Admin táblázat cella input kezelése
+         function handleAdminTableInput(event) {
+             const cell = event.target.closest('td[contenteditable="true"]');
+             if (!cell) return;
+
+             const rowIndex = parseInt(cell.dataset.rowIndex, 10);
+             const colIndex = parseInt(cell.dataset.colIndex, 10);
+             const newValue = cell.textContent; // Ne töröljük a whitespace-t itt, csak mentéskor
+
+             if (isNaN(rowIndex) || isNaN(colIndex)) return;
+
+             const currentDayData = substitutionData[adminSelectedDate];
+              if (!currentDayData || !Array.isArray(currentDayData.tableData) || currentDayData.tableData.length <= rowIndex || !Array.isArray(currentDayData.columns) || currentDayData.columns.length <= colIndex) {
+                  console.error("Invalid substitution data structure for date or column index:", adminSelectedDate, rowIndex, colIndex);
+                  // Ha hibás a struktúra, próbáljuk meg újrarenderelni a nézetet a Firebase adatok alapján
+                  if (initialPublicDataLoaded && currentView === 'edit') {
+                      renderEditView();
+                  }
+                  return;
+              }
+
+
+             // Frissítjük a megfelelő oszlop értékét (col1, col2, ...)
+             const colKey = `col${colIndex + 1}`;
+             currentDayData.tableData[rowIndex][colKey] = newValue;
+
+             console.log(`Admin table cell updated locally: Row ${rowIndex}, Col ${colIndex} to "${newValue}"`);
+             // A mentés gomb kattintásakor mentjük az egészet
+         }
+
+         // Admin táblázat fejléc input kezelése (oszlopnevek)
+         function handleAdminTableHeaderInput(event) {
+             const cell = event.target.closest('th[contenteditable="true"]');
+             if (!cell) return;
+
+             const colIndex = parseInt(cell.dataset.colIndex, 10);
+             const newHeader = cell.textContent; // Ne töröljük a whitespace-t itt, csak mentéskor
+
+             if (isNaN(colIndex)) return;
+
+              const currentDayData = substitutionData[adminSelectedDate];
+              if (!currentDayData || !Array.isArray(currentDayData.columns) || currentDayData.columns.length <= colIndex) {
+                  console.error("Invalid substitution data structure for column index:", adminSelectedDate, colIndex);
+                  // Ha hibás a struktúra, próbáljuk meg újrarenderelni a nézetet a Firebase adatok alapján
+                  if (initialPublicDataLoaded && currentView === 'edit') {
+                      renderEditView();
+                  }
+                  return;
+              }
+
+              currentDayData.columns[colIndex] = newHeader;
+              console.log(`Admin table header updated locally: Col ${colIndex} to "${newHeader}"`);
+         }
+
+
+         async function addColumn() {
+              if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+
+              const currentDayData = substitutionData[adminSelectedDate];
+               if (!currentDayData || currentDayData.status !== 'available') {
+                   showCustomAlert("Oszlopot csak 'Vannak helyettesítések' státusz esetén lehet hozzáadni.");
+                   return;
+               }
+               if (!Array.isArray(currentDayData.columns)) currentDayData.columns = []; // Alapértelmezett üres oszlopok
+               if (!Array.isArray(currentDayData.tableData) || currentDayData.tableData.length !== 8) {
+                   currentDayData.tableData = Array(8).fill({});
+               }
+
+              const newColIndex = currentDayData.columns.length;
+              const newColKey = `col${newColIndex + 1}`;
+
+              // Új oszlop hozzáadása a fejlécekhez
+              currentDayData.columns.push(""); // Üres fejléccel
+
+              // Új oszlop hozzáadása minden sorhoz
+              currentDayData.tableData = currentDayData.tableData.map(row => {
+                  row[newColKey] = ''; // Üres stringgel inicializáljuk
+                  return row;
+              });
+
+              substitutionData[adminSelectedDate] = currentDayData; // Frissítjük a globális adatot
+
+              console.log(`Added column ${newColKey} for date ${adminSelectedDate}. Total columns: ${currentDayData.columns.length}`);
+
+              // Újrarendereljük csak a táblázat szekciót az új oszloppal
+              renderEditTableSection();
+         }
+
+         async function removeColumn(buttonElement) {
+              if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+
+              const colIndex = parseInt(buttonElement.dataset.colIndex, 10);
+              if (isNaN(colIndex)) return;
+
+               const currentDayData = substitutionData[adminSelectedDate];
+               if (!currentDayData || currentDayData.status !== 'available' || !Array.isArray(currentDayData.columns) || currentDayData.columns.length <= colIndex) {
+                   console.error("Invalid state for column removal.");
+                   return;
+               }
+
+               if (currentDayData.columns.length <= 1) {
+                   showCustomAlert("Nem törölheted az utolsó oszlopot.");
+                   return;
+               }
+
+              const confirmed = await showCustomConfirm(`Biztosan törlöd a(z) ${colIndex + 1}. oszlopot erre a napra? Ez törli az oszlop tartalmát is!`, "Megerősítés");
+               if (!confirmed) return;
+
+              setAdminLoading(true);
+
+              // Oszlop eltávolítása a fejlécekből
+              currentDayData.columns.splice(colIndex, 1);
+
+              // Oszlop tartalmának eltávolítása minden sorból és kulcsok újraindexelése
+              currentDayData.tableData = currentDayData.tableData.map(row => {
+                   const newRow = {};
+                   // Iterate through the NEW columns array to build the new row
+                   currentDayData.columns.forEach((header, index) => {
+                       const newColKey = `col${index + 1}`; // New key based on the new index
+                       // Find the value from the original row using the old index
+                       // If the new index is less than the removed index, the old index is the same
+                       // If the new index is >= the removed index, the old index was one higher
+                       const oldColKey = `col${index >= colIndex ? index + 2 : index + 1}`;
+                       newRow[newColKey] = row[oldColKey] || null; // Use null for empty
+                   });
+                   return newRow;
+              });
+
+
+              substitutionData[adminSelectedDate] = currentDayData; // Frissítjük a globális adatot
+
+              console.log(`Removed column ${colIndex + 1} for date ${adminSelectedDate}. Remaining columns: ${currentDayData.columns.length}`);
+
+              // Újrarendereljük csak a táblázat szekciót a frissített oszlopokkal
+              renderEditTableSection();
+
+              setAdminLoading(false); // Befejeződött a törlés és renderelés
+         }
+
+
+         function renderEditTableSection() {
+              const adminTableSection = document.getElementById('admin-table-section');
+              if (!adminTableSection) return;
+
+              const selectedDateData = substitutionData[adminSelectedDate] || { status: 'none', message: '', columns: [], tableData: Array(8).fill({}) }; // Alapértelmezett oszlopok üresek
+              // Ensure columns is an array and defaults to 4 empty strings if empty
+              if (!Array.isArray(selectedDateData.columns) || selectedDateData.columns.length === 0) {
+                  selectedDateData.columns = ["", "", "", ""]; // Default 4 empty columns
+              }
+              // Ensure tableData is an array of 8 objects
+              if (!Array.isArray(selectedDateData.tableData) || selectedDateData.tableData.length !== 8) {
+                  selectedDateData.tableData = Array(8).fill({});
+              }
+              // Ensure each row has data for each column, using || '' for display
+              selectedDateData.tableData = selectedDateData.tableData.map(row => {
+                  const newRow = {};
+                  selectedDateData.columns.forEach((col, index) => {
+                      const colKey = `col${index + 1}`;
+                      newRow[colKey] = row[colKey] || ''; // Use || '' for display
+                  });
+                  return newRow;
+              });
+
+
+              adminTableSection.innerHTML = `
+                  <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Helyettesítési Táblázat</h3>
+                   <div class="mb-4 ${selectedDateData.status === 'whiteboard' ? '' : 'hidden'}"> <label for="admin-message" class="block text-sm font-medium text-gray-700 mb-1">Üzenet (ha státusz "Fehér táblán találhatók"):</label>
+                      <input type="text" id="admin-message" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. Technikai okok miatt..." value="${escapeHtml(selectedDateData.message || '')}">
+                   </div>
+                  <div class="overflow-x-auto shadow-md rounded-lg border border-gray-200">
+                      <table id="admin-substitutions-table" class="min-w-full divide-y divide-gray-200">
+                          <thead>
+                              <tr>
+                                  <th>Óra</th>
+                                  ${selectedDateData.columns.map((header, index) => `
+                                      <th contenteditable="true" data-col-index="${index}">${escapeHtml(header)}<button class="remove-column-button" data-col-index="${index}" title="Oszlop törlése (csak erre a napra)">X</button></th>
+                                  `).join('')}
+                              </tr>
+                          </thead>
+                          <tbody class="bg-white divide-y divide-gray-200">
+                               ${selectedDateData.tableData.map((rowData, rowIndex) => `
+                                  <tr>
+                                      <td>${rowIndex + 1}.</td>
+                                      ${selectedDateData.columns.map((header, colIndex) => {
+                                              const colKey = `col${colIndex + 1}`;
+                                              return `<td contenteditable="true" data-row-index="${rowIndex}" data-col-index="${colIndex}">${escapeHtml(rowData[colKey] || '')}</td>`; // Use || '' for display
+                                          }).join('')}
+                                  </tr>
+                              `).join('')}
+                          </tbody>
+                      </table>
+                  </div>
+                  <div class="flex justify-end items-center mt-4"> <button id="add-column-button" class="admin-action-button px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150">Oszlop hozzáadása</button>
+                  </div>
+              `;
+
+              // Frissítsük az üzenet mező disabled állapotát a státusz alapján
+              const adminStatusSelect = document.getElementById('admin-status-select');
+              if (adminStatusSelect) {
+                   const adminMessageInput = document.getElementById('admin-message');
+                   if (adminMessageInput) adminMessageInput.disabled = adminStatusSelect.value !== 'whiteboard';
+               }
+
+              setAdminLoading(false); // Befejeződött a renderelés
+          }
+
+
+        async function saveSubstitutions() {
+             if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+
+             setAdminLoading(true);
+             const dateToSave = adminSelectedDate;
+
+             // Use the current state from the global substitutionData object
+             // This object is kept up-to-date by the input change handlers
+             const dataToSave = substitutionData[dateToSave] || { status: 'none', message: null, columns: null, tableData: null };
+
+             // Ensure the structure is correct for saving, even if data is empty
+             // If status is 'available', ensure columns and tableData are arrays, even if empty
+             if (dataToSave.status === 'available') {
+                 if (!Array.isArray(dataToSave.columns)) dataToSave.columns = [];
+                 if (!Array.isArray(dataToSave.tableData)) dataToSave.tableData = Array(8).fill({});
+                 // Ensure each row has null for missing columns
+                 dataToSave.tableData = dataToSave.tableData.map(row => {
+                      const newRow = {};
+                      // Iterate based on the columns array length
+                      for (let i = 0; i < dataToSave.columns.length; i++) {
+                          const colKey = `col${i + 1}`;
+                          // Use the value from the existing row or null if not present
+                          newRow[colKey] = row[colKey] !== undefined ? row[colKey] : null;
+                      }
+                      return newRow;
+                  });
+                  // Trim column headers for saving
+                  dataToSave.columns = dataToSave.columns.map(header => header ? header.trim() || null : null);
+
+             } else {
+                 // If not 'available', ensure columns and tableData are null
+                 dataToSave.columns = null;
+                 dataToSave.tableData = null;
+             }
+
+             // If status is not 'whiteboard', message should be null for saving
+             if (dataToSave.status !== 'whiteboard') {
+                 dataToSave.message = null;
+             } else {
+                 // If status is 'whiteboard', trim the message for saving
+                 dataToSave.message = dataToSave.message ? dataToSave.message.trim() || null : null;
+             }
+
+
+             // Refine the isEmpty check: Only delete if status is 'none' AND there is no message AND no columns AND no table data (or all table data is empty/null)
+             const hasTableData = Array.isArray(dataToSave.tableData) && dataToSave.tableData.length > 0 && dataToSave.tableData.some(row => Object.values(row).some(val => val !== null && val !== ''));
+             const hasColumns = Array.isArray(dataToSave.columns) && dataToSave.columns.length > 0 && dataToSave.columns.some(header => header !== null && header !== '');
+             const hasMessage = dataToSave.message !== null && dataToSave.message !== '';
+
+             const isEmpty = dataToSave.status === 'none' && !hasMessage && !hasColumns && !hasTableData;
+
+
+             console.log("Attempting to save substitution data for", dateToSave, ":", dataToSave);
+             console.log("isEmpty check result:", isEmpty);
+
+
+             try {
+                 const docRef = firestore.collection('substitutions').doc(dateToSave);
+
+                 if (isEmpty) {
+                      const docSnap = await docRef.get();
+                      if (docSnap.exists) {
+                          await docRef.delete();
+                          console.log(`Substitution document for ${dateToSave} deleted.`);
+                      } else {
+                           console.log(`No substitution document for ${dateToSave} to delete.`);
+                      }
+                 } else {
+                      // Use set with merge: false to overwrite the entire document for the date
+                      await docRef.set(dataToSave, { merge: false });
+                      console.log(`Substitution data for ${dateToSave} saved.`);
+                 }
+
+                 showCustomAlert("Helyettesítési adatok sikeresen mentve.");
+
+                 // The Firestore listener for adminSubstitutions will update the global
+                 // substitutionData object and trigger a re-render of the edit view.
+                 // We don't need to manually update substitutionData here or call renderEditView().
+
+             } catch (error) {
+                 console.error("Error saving substitutions:", error);
+                 showCustomAlert(`Hiba a helyettesítési adatok mentésekor: ${error.message}`, "Hiba");
+             } finally {
+                 setAdminLoading(false);
+             }
+         }
+
+
+         async function addPendingUser() {
+              if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+              const emailInput = document.getElementById('newPendingUserEmail');
+              const nicknameInput = document.getElementById('newPendingUserNickname');
+              const isAdminCheckbox = document.getElementById('newPendingUserIsAdmin');
+              const email = emailInput.value.trim().toLowerCase();
+              const nickname = nicknameInput.value.trim();
+              const isAdmin = isAdminCheckbox.checked;
+              if (!email || !email.includes('@')) return showCustomAlert('Adj meg egy érvényes email címet!');
+
+              setAdminLoading(true);
+              try {
+                  const docRef = firestore.collection('pendingUsers').doc(email);
+                  const docSnap = await docRef.get();
+                  let confirmed = true;
+                   if (docSnap.exists) {
+                       confirmed = await showCustomConfirm(`"${email}" már meg van hívva. Frissíted a jogosultságát és a nevét?`, "Megerősítés");
+                   }
+                   if (!confirmed) { setAdminLoading(false); return; }
+
+                   const allowedQuery = firestore.collection('allowedUsers').where('email', '==', email);
+                   const allowedSnap = await allowedQuery.get();
+                   if (!allowedSnap.empty) {
+                       showCustomAlert(`"${email}" már szerepel az engedélyezett felhasználók között.`);
+                       setAdminLoading(false);
+                       return;
+                   }
+
+                  await docRef.set({ isAdmin: isAdmin, nickname: nickname.trim() || null }); // Trim-eljük a becenevet mentéskor
+                  emailInput.value = '';
+                  nicknameInput.value = '';
+                  isAdminCheckbox.checked = false;
+                  showCustomAlert(`"${email}" sikeresen meghívva.`);
+              }
+              catch (error) { showCustomAlert(`Hiba a meghíváskor: ${error.message}`, "Hiba"); } finally { setAdminLoading(false); }
+          }
+
+         // Delegált eseménykezelő a felhasználó listákhoz (az admin nézetben)
+         function handleAdminUsersActions(event) {
+             const button = event.target.closest('.admin-action-button');
+             if (!button) return;
+
+             const action = button.dataset.action;
+             const li = button.closest('li');
+             const id = li?.dataset.id; // UID (allowed) vagy Email (pending)
+             const email = li?.dataset.email;
+             const isadmin = li?.dataset.isadmin === 'true';
+             const nickname = li?.dataset.nickname;
+
+             console.log("Admin user action:", action, "ID:", id, "Email:", email, "IsAdmin:", isadmin, "Nickname:", nickname);
+
+             if (action === 'delete-user' && id) deleteAllowedUser(id, email);
+             else if (action === 'toggle-admin' && id) toggleAdminStatus(id, email, isadmin);
+             else if (action === 'delete-pending' && email) deletePendingUser(email);
+             else if (action === 'edit-user' && id) editUser(id, email, nickname);
+             else if (action === 'edit-pending' && email) editPendingUser(email, nickname, isadmin);
+         }
+
+
+         async function deleteAllowedUser(userId, userEmail) { // UID alapú törlés
+              if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+             if (userId === currentUser.uid) return showCustomAlert('Magadat nem távolíthatod el.');
+             const confirmed = await showCustomConfirm(`Biztosan eltávolítod az engedélyezettek közül: "${userEmail || userId}"?`, "Megerősítés");
+             if (!confirmed) return;
+             setAdminLoading(true);
+             try { await firestore.collection('allowedUsers').doc(userId).delete(); showCustomAlert(`"${userEmail || userId}" eltávolítva az engedélyezettek listájáról.`); }
+             catch (error) { showCustomAlert(`Hiba: ${error.message}`, "Hiba"); } finally { setAdminLoading(false); }
+         }
+
+         async function deletePendingUser(email) { // Email alapú törlés
+              if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+             const confirmed = await showCustomConfirm(`Biztosan törlöd a meghívót: "${email}"?`, "Megerősítés");
+             if (!confirmed) return;
+             setAdminLoading(true);
+             try { await firestore.collection('pendingUsers').doc(email).delete(); showCustomAlert(`"${email}" meghívója törölve.`); }
+             catch (error) { showCustomAlert(`Hiba: ${error.message}`, "Hiba"); } finally { setAdminLoading(false); }
+         }
+
+         async function toggleAdminStatus(userId, userEmail, currentIsAdmin) { // UID alapú
+              if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+             if (userId === currentUser.uid) return showCustomAlert('Saját státuszodat nem módosíthatod.');
+             setAdminLoading(true);
+             try { await firestore.collection('allowedUsers').doc(userId).update({ isAdmin: !currentIsAdmin }); showCustomAlert(`"${userEmail || userId}" admin státusza módosítva.`); }
+             catch (error) { showCustomAlert(`Hiba: ${error.message}`, "Hiba"); } finally { setAdminLoading(false); }
+         }
+
+         async function editUser(userId, currentEmail, currentNickname) { // Allowed user szerkesztése
+              if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+             const newNickname = prompt(`Add meg "${currentEmail}" új megjelenítendő nevét (üresen hagyva törli):`, currentNickname || '');
+             if (newNickname === null) return;
+             setAdminLoading(true);
+             try { await firestore.collection('allowedUsers').doc(userId).update({ nickname: newNickname.trim() || null }); showCustomAlert(`"${currentEmail}" megjelenítendő neve frissítve.`); }
+             catch (error) { showCustomAlert(`Hiba a név frissítésekor: ${error.message}`, "Hiba"); } finally { setAdminLoading(false); }
+         }
+
+         async function editPendingUser(email, currentNickname, currentIsAdmin) { // Pending user szerkesztése
+              if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+             const newNickname = prompt(`Add meg "${email}" új megjelenítendő nevét (üresen hagyva törli):`, currentNickname || '');
+             if (newNickname === null) return;
+             const confirmed = await showCustomConfirm(`Legyen "${email}" adminisztrátor? (Jelenlegi: ${currentIsAdmin ? 'Igen' : 'Nem'})`, "Jogosultság");
+             const newIsAdmin = confirmed;
+
+             setAdminLoading(true);
+             try { await firestore.collection('pendingUsers').doc(email).update({ nickname: newNickname.trim() || null, isAdmin: newIsAdmin }); showCustomAlert(`"${email}" meghívott adatai frissítve.`); }
+             catch (error) { showCustomAlert(`Hiba a meghívott adatainak frissítésekor: ${error.message}`, "Hiba"); } finally { setAdminLoading(false); }
+         }
+
+         async function saveAnnouncement() {
+              if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+             const message = document.getElementById('admin-announcement').value.trim();
+             setAdminLoading(true);
+             try {
+                 await firestore.collection('config').doc('announcement').set({ message: message || null }); // Üres string esetén null legyen
+                 showCustomAlert("Hirdetmény mentve.");
+                 announcement = message; // Frissítjük a globális változót is
+                 displayAnnouncement(); // Frissítjük a megjelenítést
+             } catch (error) { showCustomAlert(`Hiba a hirdetmény mentésekor: ${error.message}`, "Hiba"); }
+             finally { setAdminLoading(false); }
+         }
+
+         function setAdminLoading(isLoading) {
+              const overlay = document.getElementById('admin-action-overlay');
+             // Csak az aktív admin/edit nézet elemeit célozzuk
+             const activeAdminView = currentView === 'admin' ? adminViewDiv : (currentView === 'edit' ? editViewDiv : null);
+
+             if (!activeAdminView) return; // Ha egyik admin nézet sem aktív
+
+             const inputs = activeAdminView.querySelectorAll('.admin-input');
+             const buttons = activeAdminView.querySelectorAll('.admin-action-button');
+             const editableCells = activeAdminView.querySelectorAll('td[contenteditable="true"], th[contenteditable="true"]');
+
+             overlay?.classList.toggle('hidden', !isLoading);
+             overlay?.classList.toggle('flex-col', isLoading);
+             inputs.forEach(input => input.disabled = isLoading);
+             buttons.forEach(button => {
+                 const li = button.closest('li');
+                 const userId = li?.dataset.id;
+                 const isSelfAction = (button.dataset.action === 'delete-user' || button.dataset.action === 'toggle-admin') && userId === currentUser?.uid;
+                 button.disabled = isLoading || isSelfAction;
+             });
+             editableCells.forEach(cell => cell.contentEditable = !isLoading);
+         }
+
+
+        // --- Eseményfigyelők ---
+        function setupEventListeners() {
+            console.log("Setting up event listeners...");
+            window.addEventListener('hashchange', handleRouteChange);
+            googleLoginButton.addEventListener('click', handleGoogleLogin);
+            loginPopupCloseButton.addEventListener('click', () => loginPopup.classList.add('hidden'));
+
+             // Eseményfigyelők a szerkesztő nézet elemeihez (delegálással)
+             editViewDiv.addEventListener('change', (event) => {
+                 if (event.target.id === 'admin-date-picker') handleAdminDateChange(event);
+                 if (event.target.id === 'admin-status-select') handleAdminStatusChange(event);
+             });
+             editViewDiv.addEventListener('input', (event) => {
+                 if (event.target.id === 'admin-message') handleAdminMessageInput(event);
+                 handleAdminTableInput(event); // Táblázat cellák
+                 handleAdminTableHeaderInput(event); // Táblázat fejlécek
+             });
+             editViewDiv.addEventListener('click', (event) => {
+                  // Mentés gomb csak akkor figyel, ha látható
+                  if (event.target.id === 'save-substitutions-button' && !event.target.classList.contains('hidden')) {
+                      saveSubstitutions();
+                  }
+                  if (event.target.id === 'add-column-button') addColumn(); // Új gomb eseményfigyelő
+                  if (event.target.classList.contains('remove-column-button')) removeColumn(event.target); // Oszlop törlés gomb
+             });
+
+
+             // Eseményfigyelők az admin nézet elemeihez (delegálással)
+             adminViewDiv.addEventListener('click', (event) => {
+                 if (event.target.id === 'add-pending-user-button') addPendingUser();
+                 if (event.target.id === 'save-announcement-button') saveAnnouncement();
+                 handleAdminUsersActions(event); // Felhasználó listák gombjai
+             });
+
+
+            console.log("Base event listeners attached.");
+        }
+
+
+        // --- Login Popup Kezelése ---
+        function showLoginPopup(message = "Ehhez a művelethez bejelentkezés szükséges.") {
+            loginPopupMessage.textContent = message;
+            loginPopup.classList.remove('hidden');
+        }
+
+         // --- Egyedi Alert/Confirm Modal ---
+         let confirmResolve = null;
+         function showCustomDialog(message, type = 'alert', title = 'Értesítés') {
+             // Csak egy modal lehet aktív egyszerre
+             if (document.querySelector('.modal-overlay.active')) {
+                 console.warn("Another modal is already active. Closing it.");
+                 document.querySelectorAll('.modal-overlay.active').forEach(modal => modal.classList.remove('active'));
+             }
+
+             customDialogMessage.innerHTML = message.replace(/\n/g, '<br>');
+             customDialogButtons.innerHTML = '';
+
+             if (type === 'confirm') {
+                 const cancelButton = document.createElement('button');
+                 cancelButton.textContent = 'Mégse';
+                 cancelButton.className = 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-150';
+                 cancelButton.onclick = () => { customDialog.classList.remove('active'); if (confirmResolve) confirmResolve(false); confirmResolve = null; };
+                 customDialogButtons.appendChild(cancelButton);
+
+                 const okButton = document.createElement('button');
+                 okButton.textContent = 'OK';
+                 okButton.className = 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-150';
+                 okButton.onclick = () => { customDialog.classList.remove('active'); if (confirmResolve) confirmResolve(true); confirmResolve = null; };
+                 customDialogButtons.appendChild(okButton);
+
+             } else { // type === 'alert'
+                 const okButton = document.createElement('button');
+                 okButton.textContent = 'OK';
+                 okButton.className = 'px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150';
+                 okButton.onclick = () => customDialog.classList.remove('active');
+                 customDialogButtons.appendChild(okButton);
+             }
+             customDialog.classList.add('active');
+             // Animáció hozzáadása
+             requestAnimationFrame(() => { customDialog.querySelector('.modal-content').classList.add('modal-enter-active'); });
+         }
+         function showCustomAlert(message, title = 'Értesítés') { showCustomDialog(message, 'alert', title); }
+         function showCustomConfirm(message, title = 'Megerősítés') {
+             return new Promise((resolve) => {
+                 confirmResolve = resolve;
+                 const content = customDialog.querySelector('.modal-content');
+                 // Ha már aktív, csak frissítsük a tartalmat
+                 if (customDialog.classList.contains('active')) {
+                     showCustomDialog(message, 'confirm', title);
+                 } else {
+                     customDialog.classList.add('active');
+                     requestAnimationFrame(() => {
+                         content.classList.add('modal-enter-active');
+                         showCustomDialog(message, 'confirm', title);
+                     });
+                 }
+             });
+         }
+
+
+        // --- Óra és Napváltás Figyelő ---
+        function startClockAndDayCheck() {
+            let lastKnownDate = formatDateYYYYMMDD(new Date());
+
+            if (dayCheckInterval) clearInterval(dayCheckInterval);
+             // Ellenőrzés percenként, hogy éjfél elmúlt-e
+             dayCheckInterval = setInterval(() => {
+                 const currentDate = formatDateYYYYMMDD(new Date());
+                 if (currentDate !== lastKnownDate) {
+                     console.log("Midnight detected! Reloading data for new day.");
+                     lastKnownDate = currentDate;
+                     // Frissítsük az admin nézet dátumát is, ha a mai nap volt kiválasztva
+                     if (adminSelectedDate === lastKnownDate) {
+                          adminSelectedDate = currentDate;
+                          // Az admin/edit nézet újrarenderelése a handleRouteChange() hívásban történik meg
+                      }
+                     // Újraértékeljük a routingot, ami frissíti a főoldalt és a publikus nézetet
+                     if (initialPublicDataLoaded && !['loading', 'error'].includes(currentView)) {
+                          handleRouteChange();
+                      }
+                 }
+             }, 60000); // Ellenőrzés percenként
+
+             // Óra frissítése másodpercenként
+             if (clockInterval) clearInterval(clockInterval);
+             clockInterval = setInterval(updateClockDisplay, 1000);
+             updateClockDisplay(); // Első frissítés azonnal
+        }
+
+        // Idő kijelző frissítése
+        function updateClockDisplay() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            if (currentTimeSpan) {
+                currentTimeSpan.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+        }
+
+
+        // --- Admin Üzenet Megjelenítése ---
+        function displayAnnouncement() {
+             // A hirdetmény csak adminnak jelenik meg
+             if (currentUser?.isAdmin && announcement) {
+                 announcementMessageSpan.textContent = announcement;
+                 announcementBar.classList.remove('hidden');
+             } else {
+                 announcementBar.classList.add('hidden');
+             }
+         }
+
+
+        // --- Alkalmazás Indítása ---
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+    </script>
+
+</body>
+</html>
