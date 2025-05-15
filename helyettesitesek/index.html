@@ -2,7 +2,8 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"> <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SZAG Helyettesítések</title>
@@ -304,7 +305,8 @@
                 <div id="nav-links" class="flex items-center space-x-2 sm:space-x-4">
                      </div>
                  <div id="header-right-section" class="flex items-center space-x-4">
-                     <span id="current-time" class="text-sm text-indigo-200 hidden embed-view-element">--:--:--</span> <div id="user-status" class="flex items-center space-x-2">
+                     <span id="current-time" class="text-sm text-indigo-200 hidden embed-view-element">--:--:--</span>
+                     <div id="user-status" class="flex items-center space-x-2">
                          <span class="text-sm text-indigo-200">Betöltés...</span>
                      </div>
                  </div>
@@ -535,6 +537,8 @@ const firebaseConfig = {
                      return;
                  }
              }
+             // Publikus nézet (#/embed) link eltávolítva a navigációból,
+             // de a routingban meghagyjuk, ha valaki közvetlenül próbálja elérni
              else if (hash === '#/embed') targetView = 'public-embed'; // Publikus nézet
             else {
                 targetView = 'public-main'; // Alapértelmezett a főoldal
@@ -583,8 +587,11 @@ const firebaseConfig = {
 
             if (user) {
                  loginPopup.classList.add('hidden');
+                 // Felhasználó nevének és státuszának megjelenítése a kijelentkezés gomb előtt
+                 const userNameDisplay = escapeHtml(user.nickname || user.displayName || user.email);
+                 const adminStatusDisplay = user.isAdmin ? '<span class="text-yellow-300">(Admin)</span>' : '';
                  userStatusDiv.innerHTML = `
-                     <span class="text-sm hidden lg:inline" title="${escapeHtml(user.email)}">${escapeHtml(user.nickname || user.displayName || user.email)} ${user.isAdmin ? '<span class="text-yellow-300">(Admin)</span>' : ''}</span>
+                     <span class="text-sm hidden lg:inline mr-2" title="${escapeHtml(user.email)}">${userNameDisplay} ${adminStatusDisplay}</span>
                      <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold py-1 px-2 sm:px-3 rounded transition duration-150 ease-in-out">
                          Kijelentkezés
                      </button>
@@ -640,9 +647,12 @@ const firebaseConfig = {
                      <button onclick="navigateTo('#/admin')" class="hover:bg-purple-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'admin' ? 'bg-purple-800 font-semibold' : 'bg-purple-600'}">Admin</button>
                  `;
             }
+             // Publikus nézet gomb eltávolítva a navigációból
+             /*
              linksHtml += `
                  <button onclick="navigateTo('#/embed')" class="hover:bg-gray-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'public-embed' ? 'bg-gray-800 font-semibold' : 'bg-gray-600'}">Publikus nézet</button>
              `;
+             */
             navLinksDiv.innerHTML = linksHtml;
         }
 
@@ -882,7 +892,7 @@ const firebaseConfig = {
                                  <option value="available" ${selectedDateData.status === 'available' ? 'selected' : ''}>Vannak helyettesítések</option>
                              </select>
                          </div>
-                         ${selectedDateData.status === 'available' ?
+                         ${selectedDateData.status === 'available' || selectedDateData.status === 'whiteboard' ? // Mentés gomb megjelenítése whiteboard státusznál is
                              `<button id="save-substitutions-button" data-action="save-substitutions" class="admin-action-button px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">Mentés</button>`
                              : ''
                          }
@@ -895,14 +905,14 @@ const firebaseConfig = {
                           </div>
                          <div class="overflow-x-auto shadow-md rounded-lg border border-gray-200">
                              <table id="admin-substitutions-table" class="min-w-full divide-y divide-gray-200">
-                                 <thead>
-                                     <tr>
-                                         <th>Óra</th>
-                                         ${selectedDateData.columns.map((header, index) => `
-                                             <th contenteditable="true" data-col-index="${index}">${escapeHtml(header)}<button class="remove-column-button" data-col-index="${index}" title="Oszlop törlése (csak erre a napra)">X</button></th>
-                                         `).join('')}
-                                     </tr>
-                                 </thead>
+                                <thead>
+                                <tr>
+                                <th>Óra</th>
+                                ${selectedDateData.columns.map((header, index) => `
+                                    <th data-col-index="${index}">${escapeHtml(header)}<button class="remove-column-button" data-col-index="${index}" title="Oszlop törlése (csak erre a napra)" contenteditable="false">X</button></th>
+                                `).join('')}
+                                </tr>
+                                </thead>
                                  <tbody class="bg-white divide-y divide-gray-200">
                                      ${selectedDateData.tableData.map((rowData, rowIndex) => `
                                          <tr>
@@ -919,6 +929,12 @@ const firebaseConfig = {
                          <div class="flex justify-end items-center mt-4"> <button id="add-column-button" class="admin-action-button px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150">Oszlop hozzáadása</button>
                          </div>
                      </section>
+
+                      <section id="admin-message-section" class="${selectedDateData.status === 'whiteboard' ? '' : 'hidden'}">
+                          <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Üzenet (ha státusz "Fehér táblán találhatók")</h3>
+                          <input type="text" id="admin-message" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. Technikai okok miatt..." value="${escapeHtml(selectedDateData.message || '')}">
+                      </section>
+
                  </div>
             `;
             editViewDiv.innerHTML = editHTML;
@@ -1281,13 +1297,16 @@ const firebaseConfig = {
              const newStatus = event.target.value;
              const adminMessageInput = document.getElementById('admin-message');
              const adminTableSection = document.getElementById('admin-table-section');
-             const adminMessageSection = editViewDiv.querySelector('.mb-4'); // Üzenet szekció
-             // Mentés gomb referenciáját nem kell itt lekérni, mert a renderEditView újra generálja
+             const adminMessageSection = editViewDiv.querySelector('#admin-message-section'); // Üzenet szekció
+             const saveButton = document.getElementById('save-substitutions-button'); // Mentés gomb
 
              // Engedélyezzük/Letiltjuk az üzenet mezőt és a táblázatot a státusz alapján
              if (adminMessageInput) adminMessageInput.disabled = newStatus !== 'whiteboard';
              if (adminTableSection) adminTableSection.classList.toggle('hidden', newStatus !== 'available');
              if (adminMessageSection) adminMessageSection.classList.toggle('hidden', newStatus !== 'whiteboard'); // Üzenet szekció megjelenítése/elrejtése
+
+             // Mentés gomb láthatósága
+             if (saveButton) saveButton.classList.toggle('hidden', newStatus === 'none');
 
 
              // Frissítjük a substitutionData objektumot az új státusszal
@@ -1298,8 +1317,8 @@ const firebaseConfig = {
              // substitutionData[adminSelectedDate] = currentDayData; // Frissítjük a globális adatot
 
              console.log("Admin status changed locally:", newStatus);
-             // Mindig újrarendereljük a teljes nézetet, hogy a Mentés gomb helyesen jelenjen meg/tűnjön el
-             renderEditView();
+             // Rendereljük újra a releváns szekciókat, nem a teljes nézetet
+             renderEditTableSection(); // Ez frissíti a táblázatot és az üzenet szekciót is
          }
 
          // Admin üzenet mező input kezelése
@@ -1454,7 +1473,10 @@ const firebaseConfig = {
 
          function renderEditTableSection() {
               const adminTableSection = document.getElementById('admin-table-section');
-              if (!adminTableSection) return;
+              const adminMessageSection = document.getElementById('admin-message-section'); // Üzenet szekció
+              const adminStatusSelect = document.getElementById('admin-status-select'); // Státuszválasztó
+              const saveButton = document.getElementById('save-substitutions-button'); // Mentés gomb
+
 
               const selectedDateData = substitutionData[adminSelectedDate] || { status: 'none', message: '', columns: [], tableData: Array(8).fill({}) }; // Alapértelmezett oszlopok üresek
               // Ensure columns is an array and defaults to 4 empty strings if empty
@@ -1475,12 +1497,13 @@ const firebaseConfig = {
                   return newRow;
               });
 
+              // Update visibility of sections based on status
+              if (adminTableSection) adminTableSection.classList.toggle('hidden', selectedDateData.status !== 'available');
+              if (adminMessageSection) adminMessageSection.classList.toggle('hidden', selectedDateData.status !== 'whiteboard');
+              if (saveButton) saveButton.classList.toggle('hidden', selectedDateData.status === 'none'); // Mentés gomb láthatósága
 
-              adminTableSection.innerHTML = `
+              let tableHTML = `
                   <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Helyettesítési Táblázat</h3>
-                   <div class="mb-4 ${selectedDateData.status === 'whiteboard' ? '' : 'hidden'}"> <label for="admin-message" class="block text-sm font-medium text-gray-700 mb-1">Üzenet (ha státusz "Fehér táblán találhatók"):</label>
-                      <input type="text" id="admin-message" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. Technikai okok miatt..." value="${escapeHtml(selectedDateData.message || '')}">
-                   </div>
                   <div class="overflow-x-auto shadow-md rounded-lg border border-gray-200">
                       <table id="admin-substitutions-table" class="min-w-full divide-y divide-gray-200">
                           <thead>
@@ -1508,12 +1531,15 @@ const firebaseConfig = {
                   </div>
               `;
 
+              if (adminTableSection) adminTableSection.innerHTML = tableHTML; // Csak a táblázat szekció tartalmát frissítjük
+
               // Frissítsük az üzenet mező disabled állapotát a státusz alapján
-              const adminStatusSelect = document.getElementById('admin-status-select');
-              if (adminStatusSelect) {
-                   const adminMessageInput = document.getElementById('admin-message');
-                   if (adminMessageInput) adminMessageInput.disabled = adminStatusSelect.value !== 'whiteboard';
+              const adminMessageInput = document.getElementById('admin-message');
+              if (adminMessageInput && adminStatusSelect) {
+                   adminMessageInput.disabled = adminStatusSelect.value !== 'whiteboard';
+                   adminMessageInput.value = escapeHtml(selectedDateData.message || ''); // Frissítsük az üzenet mező értékét is
                }
+
 
               setAdminLoading(false); // Befejeződött a renderelés
           }
