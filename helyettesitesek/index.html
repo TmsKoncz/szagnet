@@ -301,8 +301,8 @@
           }
           /* Idő kijelző stílusa az embed fejlécben */
           .embed-header #current-time {
-              font-size: 1rem; /* text-base */
-              font-weight: normal;
+              font-size: 1.125rem; /* text-base */
+              font-weight: bold;
               color: #e0e7ff; /* indigo-200 */
               flex-shrink: 0; /* Prevent shrinking */
                display: block !important; /* Biztosítsuk, hogy látható legyen az embed fejlécben */
@@ -404,6 +404,7 @@ const firebaseConfig = {
         let dayCheckInterval = null;
         let authStatePromise = null;
         let adminSelectedDate = formatDateYYYYMMDD(new Date()); // Admin nézetben kiválasztott dátum
+        
 
         // Firebase listener leiratkozó függvények tárolása
         let unsubscribePublicListeners = [];
@@ -601,17 +602,21 @@ const firebaseConfig = {
         }
 
         // --- Felhasználói Felület Frissítése ---
-        function updateUIBasedOnAuthState(user) {
+  // --- Felhasználói Felület Frissítése ---
+// --- Felhasználói Felület Frissítése ---
+function updateUIBasedOnAuthState(user) {
              console.log("updateUIBasedOnAuthState called with user:", user ? user.uid : 'null');
              currentUser = user; // Fontos: currentUser beállítása itt
 
             if (user) {
+                 console.log("User signed in. Updating UI and listeners...");
                  loginPopup.classList.add('hidden');
                  // Felhasználó nevének és státuszának megjelenítése a kijelentkezés gomb előtt
                  const userNameDisplay = escapeHtml(user.nickname || user.displayName || user.email);
                  const adminStatusDisplay = user.isAdmin ? '<span class="text-yellow-300">(Admin)</span>' : '';
+                 // MÓDOSÍTVA: Eltávolítva a "hidden lg:inline" osztályok a névről a span elemből.
                  userStatusDiv.innerHTML = `
-                     <span class="text-sm hidden lg:inline mr-2" title="${escapeHtml(user.email)}">${userNameDisplay} ${adminStatusDisplay}</span>
+                     <span class="text-sm mr-2" title="${escapeHtml(user.email)}">${userNameDisplay} ${adminStatusDisplay}</span>
                      <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold py-1 px-2 sm:px-3 rounded transition duration-150 ease-in-out">
                          Kijelentkezés
                      </button>
@@ -622,38 +627,70 @@ const firebaseConfig = {
                      logoutBtn.removeEventListener('click', handleLogout); // Biztonsági okból először eltávolítjuk
                      logoutBtn.addEventListener('click', handleLogout);
                  }
-                 // Admin listeners are needed for both admin and edit views now for user lists
+                 // Admin listenerek (felhasználók, pending) és edit listenerek (helyettesítések) beállítása,
+                 // ha van bejelentkezett felhasználó.
+                 // A setupAdminFirestoreListeners belső ellenőrzése kezeli, hogy kihez milyen listenerek kellenek.
+                 // Csak akkor állítjuk be a listenereket, ha még nincsenek beállítva bejelentkezés után.
                  if (user && unsubscribeAdminListeners.length === 0) {
                      setupAdminFirestoreListeners();
-                 } else if (!user) { // If user logs out, unsubscribe admin listeners
-                     unsubscribeAdminFirestoreListeners();
-                     allowedUsers = [];
-                     pendingUsers = [];
                  }
-                  // Mindig hívjuk a handleRouteChange-t az UI frissítése után
-                  handleRouteChange();
-                 displayAnnouncement(); // Hirdetmény csak adminnak (ez a displayAnnouncement belsejében dől el)
 
             } else { // User is null (logged out)
-                 if (currentUser !== undefined) { // Csak akkor frissítsük, ha nem a kezdeti undefined állapot
+                 console.log("User signed out. Updating UI and listeners...");
+                 // Csak akkor frissítsük a UI-t, ha nem a kezdeti undefined állapot az oldal betöltésekor.
+                 if (currentUser !== undefined) {
                      userStatusDiv.innerHTML = `<button id="show-login-button" class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-semibold py-1 px-2 sm:px-3 rounded">Bejelentkezés</button>`;
                      const loginBtn = document.getElementById('show-login-button');
                      if (loginBtn) {
                          loginBtn.removeEventListener('click', () => showLoginPopup()); // Biztonsági okból először eltávolítjuk
                          loginBtn.addEventListener('click', () => showLoginPopup());
                      }
-                     unsubscribeAdminFirestoreListeners(); // Unsubscribe admin listeners on logout
-                     allowedUsers = [];
+                     // Leiratkozás az összes admin/edit listenerről kijelentkezéskor.
+                     unsubscribeAdminFirestoreListeners();
+                     allowedUsers = []; // Felhasználó listák ürítése
                      pendingUsers = [];
-                     announcementBar.classList.add('hidden'); // Hirdetmény elrejtése kijelentkezett usernek
-                     // Mindig hívjuk a handleRouteChange-t az UI frissítése után
-                     handleRouteChange();
+                     announcementBar.classList.add('hidden'); // Hirdetmény elrejtése
+                 } else {
+                     // Kezdeti állapot (currentUser undefined) - az alkalmazás még töltődik.
+                     console.log("Auth state unknown during initial load - UI will be set after initial data load.");
+                     userStatusDiv.innerHTML = `<span class="text-sm text-indigo-200">Betöltés...</span>`;
+                     announcementBar.classList.add('hidden');
                  }
             }
-             updateNavLinks();
-         }
+            // Navigációs linkek frissítése az új auth state alapján.
+            updateNavLinks();
+             // Hirdetmény megjelenítése az új auth state alapján (a displayAnnouncement belsőleg ellenőrzi az admin státuszt).
+             displayAnnouncement();
 
-        function updateNavLinks() {
+            // --- ADD THIS SECTION ---
+            // After updating UI elements based on auth state, explicitly re-render the current view
+            // to reflect any changes in visible content or interactive elements.
+            if (initialPublicDataLoaded && !['loading', 'error'].includes(currentView)) {
+                 console.log(`Auth state changed, re-rendering current view: ${currentView}`);
+                 renderView();
+            } else if (['public-main', 'public-embed', 'admin', 'edit'].includes(currentView)) {
+                  // If initial data is not yet loaded, ensure the view is still showing
+                  // the loading indicator based on the determined currentView.
+                  const viewElement = document.getElementById(`${currentView}-view`);
+                   if (viewElement) {
+                      viewElement.classList.remove('hidden');
+                      viewElement.classList.add('view-loading');
+                   }
+             } else if (currentView === 'loading' || currentView === 'error') {
+                  // If in loading or error state, ensure those views are displayed.
+                  switchView(currentView);
+             }
+             // --- END ADDED SECTION ---
+
+            // Kezdeti útvonal feldolgozása vagy az aktuális nézet frissítése a hash és auth state alapján.
+            // This call to handleRouteChange might still be useful for initial load or manual hash changes,
+            // but the explicit renderView call above handles the auth state change re-render.
+            // if (initialPublicDataLoaded && !['loading', 'error'].includes(currentView)) {
+            //      console.log("Initial data loaded, re-evaluating route based on auth state.");
+            //      handleRouteChange(); // Keep this if you want it to handle route changes on auth state change *in addition* to the explicit re-render
+            // }
+         }
+         function updateNavLinks() {
             let linksHtml = `
                  <button onclick="navigateTo('#/')" class="hover:bg-indigo-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'public-main' ? 'bg-indigo-800 font-semibold' : ''}">Főoldal</button>
             `;
@@ -1038,8 +1075,9 @@ const firebaseConfig = {
                    </div>
              `;
              publicEmbedViewDiv.innerHTML = embedHTML;
-              // Update the currentTimeSpan reference after rendering
-             currentTimeSpan = document.getElementById('current-time');
+              // MÓDOSÍTVA: Frissítsük a currentTimeSpan referenciát
+              // Az új elemet a publicEmbedViewDiv-en belül keressük meg
+              currentTimeSpan = publicEmbedViewDiv.querySelector('#current-time');
              console.log("Updated currentTimeSpan reference in renderPublicEmbedView:", currentTimeSpan);
          }
 
@@ -1114,38 +1152,61 @@ const firebaseConfig = {
              });
          }
 
-        function handleGoogleLogin() {
-            if (!auth || !googleProvider) return showError("Auth szolgáltatás nem inicializálódott.");
-            googleLoginButton.disabled = true;
-            loginSpinner.classList.remove('hidden');
-            loginButtonText.textContent = 'Bejelentkezés...';
-            auth.signInWithPopup(googleProvider)
-                 .catch((error) => {
-                     console.error("Google Sign-In Error:", error);
-                     if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-                         showCustomAlert(`Hiba a Google bejelentkezés során: ${error.message}`, "Hiba");
-                     }
-                 })
-                 .finally(() => {
-                     // Csak akkor állítsuk vissza a gombot, ha a popup még látható
-                     if (loginPopup && !loginPopup.classList.contains('hidden')) {
-                         googleLoginButton.disabled = false;
-                         loginSpinner.classList.add('hidden');
-                         loginButtonText.textContent = 'Bejelentkezés iskolai Google-fiókkal';
-                     }
-                 });
-        }
-
-         function handleLogout() {
+         function handleGoogleLogin() {
+             if (!auth || !googleProvider) return showError("Auth szolgáltatás nem inicializálódott.");
+             googleLoginButton.disabled = true;
+             loginSpinner.classList.remove('hidden');
+             loginButtonText.textContent = 'Bejelentkezés...';
+             auth.signInWithPopup(googleProvider)
+                  .then((result) => {
+                      // Sikeres bejelentkezés
+                      console.log("Google Sign-In successful.", result.user);
+                      // Itt NEM KELL MANUÁLISAN beállítani a currentUser-t vagy a UI-t,
+                      // mert az auth.onAuthStateChanged listener fog lefutni a háttérben,
+                      // és az fogja frissíteni a UI-t ÉS most már automatikusan újra is töltjük az oldalt.
+                      console.log("Sign in successful. Reloading page...");
+                      window.location.reload(); // Oldal frissítése bejelentkezés után
+                  })
+                  .catch((error) => {
+                      console.error("Google Sign-In Error:", error);
+                      // Hibakezelés (pl. popup bezárása felhasználó által, vagy egyéb hiba)
+                      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+                          showCustomAlert(`Hiba a Google bejelentkezés során: ${error.message}`, "Hiba");
+                      }
+                  })
+                  .finally(() => {
+                      // Ezt a részt megtarthatod, ha biztos akarsz lenni benne,
+                      // hogy a gomb visszaállítódik, ha valamiért nem történt oldalfrissítés
+                      // (pl. hiba volt, vagy ha később úgy döntesz, hogy nem mindig frissítesz).
+                      // De az oldalfrissítés miatt valójában ez a rész nem fog lefutni sikeres bejelentkezéskor.
+                      if (loginPopup && !loginPopup.classList.contains('hidden')) {
+                          googleLoginButton.disabled = false;
+                          loginSpinner.classList.add('hidden');
+                          loginButtonText.textContent = 'Bejelentkezés iskolai Google-fiókkal';
+                      }
+                  });
+         }
+         
+        function handleLogout() {
               if (!auth) return;
               console.log("Logging out...");
               // Nincs jogosultság ellenőrzés a kijelentkezéshez, ez mindig engedélyezett
-              auth.signOut().catch((error) => {
+              auth.signOut()
+                .then(() => {
+                    // Sikeres kijelentkezés után frissítjük az oldalt
+                    console.log("Sign out successful. Reloading page...");
+                    window.location.reload();
+                })
+                .catch((error) => {
                   console.error("Logout failed:", error);
                   showCustomAlert("Hiba történt a kijelentkezés során.", "Hiba");
+                    // Hiba esetén is frissíthetjük az oldalt, hogy egységes legyen a viselkedés
+                    // vagy eldönthetjük, hogy csak sikeres kijelentkezéskor frissítünk.
+                    // Ha a cél a UI állapotának resetelése, akkor hiba esetén is lehet értelme.
+                    // Most tegyük csak sikeres kijelentkezés esetén a frissítést.
+                    // window.location.reload(); // Opcionális: hiba esetén is frissítés
               });
           }
-
 
         // --- Firestore Listeners ---
         function setupPublicFirestoreListeners() {
