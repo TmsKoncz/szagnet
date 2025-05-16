@@ -1114,32 +1114,7 @@ const firebaseConfig = {
              });
          }
 
-         function handleGoogleLogin() {
-            if (!auth || !googleProvider) return showError("Auth szolgáltatás nem inicializálódott.");
-            googleLoginButton.disabled = true;
-            loginSpinner.classList.remove('hidden');
-            loginButtonText.textContent = 'Bejelentkezés...';
-            auth.signInWithPopup(googleProvider)
-                 .then((result) => {
-                     console.log("Google Sign-In successful.", result.user);
-                     // Trigger page reload AFTER successful login
-                     window.location.reload();
-                 })
-                 .catch((error) => {
-                     console.error("Google Sign-In Error:", error);
-                     if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-                         showCustomAlert(`Hiba a Google bejelentkezés során: ${error.message}`, "Hiba");
-                     }
-                 })
-                 .finally(() => {
-                     // Reset button state only if reload didn't happen (e.g., error or popup closed)
-                      if (loginPopup && !loginPopup.classList.contains('hidden')) {
-                         googleLoginButton.disabled = false;
-                         loginSpinner.classList.add('hidden');
-                         loginButtonText.textContent = 'Bejelentkezés iskolai Google-fiókkal';
-                      }
-                 });
-        
+        function handleGoogleLogin() {
             if (!auth || !googleProvider) return showError("Auth szolgáltatás nem inicializálódott.");
             googleLoginButton.disabled = true;
             loginSpinner.classList.remove('hidden');
