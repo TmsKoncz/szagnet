@@ -1054,7 +1054,7 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                                     console.log("Attempting to commit batch: add to allowedUsers, delete from pendingUsers, update bookings");
                                     await batch.commit();
                                     console.log("User successfully migrated from pending to allowed, and bookings updated.");
-
+                                    handleRouteChange();
                                 } else {
                                     console.warn("User not found in pendingUsers either. Access denied:", user.email);
                                     showCustomAlert(`Hozzáférés megtagadva ehhez az email címhez: ${user.email}. Kérj meghívót egy adminisztrátortól.`, "Hiba");
@@ -1113,32 +1113,34 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
         }
 
         function handleLogout() {
-    showCustomDialog("Biztosan ki szeretnél jelentkezni?", "confirm", "Kijelentkezés megerősítése")
-        .then(confirmed => {
-            if (confirmed) {
-                if (typeof firebase !== 'undefined' && firebase.auth && typeof firebase.auth === 'function' && typeof auth !== 'undefined' && auth && typeof auth.signOut === 'function') {
-                    // Ha a Firebase és az Auth inicializálva van, és a signOut függvény is elérhető
-                    console.log("Logging out.");
-                    auth.signOut()
-                        .then(() => {
-                            console.log("Sign out successful. Reloading page...");
+            // Call showCustomConfirm which returns a Promise
+            showCustomConfirm("Biztosan ki szeretnél jelentkezni?", "Kijelentkezés megerősítése")
+                .then(confirmed => {
+                    if (confirmed) {
+                        if (typeof firebase !== 'undefined' && firebase.auth && typeof firebase.auth === 'function' && typeof auth !== 'undefined' && auth && typeof auth.signOut === 'function') {
+                            // Ha a Firebase és az Auth inicializálva van, és a signOut függvény is elérhető
+                            console.log("Logging out.");
+                            auth.signOut()
+                                .then(() => {
+                                    console.log("Sign out successful. Reloading page...");
+                                    window.location.reload();
+                                })
+                                .catch((error) => {
+                                    console.error("Logout failed:", error);
+                                    showCustomAlert("Hiba történt a kijelentkezés során.", "Hiba");
+                                });
+                        } else {
+                            // Ha a Firebase Auth szolgáltatás mégsem elérhető
+                            console.warn("Firebase Auth is not initialized or signOut function is not available. Attempting fallback reload.");
+                            showCustomAlert("Hiba a kijelentkezés során. Próbálja meg újra, vagy frissítse az oldalt.", "Hiba");
+                            // Opcionális: Ha nem tudunk kijelentkezni, de szeretnénk biztosítani, hogy az oldal újra töltődjön.
+                            // Ez nem a "tiszta" kijelentkezés, de segíthet helyreállítani az állapotot.
                             window.location.reload();
-                        })
-                        .catch((error) => {
-                            console.error("Logout failed:", error);
-                            showCustomAlert("Hiba történt a kijelentkezés során.", "Hiba");
-                        });
-                } else {
-                    // Ha a Firebase Auth szolgáltatás mégsem elérhető
-                    console.warn("Firebase Auth is not initialized or signOut function is not available. Attempting fallback reload.");
-                    showCustomAlert("Hiba a kijelentkezés során. Próbálja meg újra, vagy frissítse az oldalt.", "Hiba");
-                    // Opcionális: Ha nem tudunk kijelentkezni, de szeretnénk biztosítani, hogy az oldal újra töltődjön.
-                    // Ez nem a "tiszta" kijelentkezés, de segíthet helyreállítani az állapotot.
-                    window.location.reload();
-                }
-            }
-        });
-}
+                        }
+                    }
+                });
+        }
+
 
 
         // --- Firestore Listenerek ---
@@ -1706,59 +1708,77 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
         }
 
         // --- Egyedi Alert/Confirm Modal ---
-        let confirmResolve = null;
-        function showCustomDialog(message, type = 'alert', title = 'Értesítés') {
-            customDialogMessage.innerHTML = message.replace(/\n/g, '<br>');
-            customDialogButtons.innerHTML = '';
+        let confirmResolve = null; // Globálisan definiálva
 
-            // Set modal title if available
-            const modalTitle = customDialog.querySelector('h3') || document.createElement('h3');
-            modalTitle.textContent = title;
-            modalTitle.className = 'text-xl font-bold mb-4 text-indigo-700';
-             if (!customDialog.querySelector('h3')) customDialog.querySelector('.modal-content').insertBefore(modalTitle, customDialogMessage);
+function showCustomDialog(message, type = 'alert', title = 'Értesítés') {
+    customDialogMessage.innerHTML = message.replace(/\n/g, '<br>');
+    customDialogButtons.innerHTML = '';
 
+    const modalTitle = customDialog.querySelector('h3') || document.createElement('h3');
+    modalTitle.textContent = title;
+    modalTitle.className = 'text-xl font-bold mb-4 text-indigo-700';
+    if (!customDialog.querySelector('h3')) customDialog.querySelector('.modal-content').insertBefore(modalTitle, customDialogMessage);
 
-            if (type === 'confirm') {
-                const cancelButton = document.createElement('button');
-                cancelButton.textContent = 'Mégse';
-                cancelButton.className = 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-150';
-                cancelButton.onclick = () => { customDialog.classList.remove('active'); if (confirmResolve) confirmResolve(false); };
-                customDialogButtons.appendChild(cancelButton);
-
-                const okButton = document.createElement('button');
-                okButton.textContent = 'OK';
-                okButton.className = 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-150';
-                okButton.onclick = () => { customDialog.classList.remove('active'); if (confirmResolve) confirmResolve(true); };
-                customDialogButtons.appendChild(okButton);
-
-            } else {
-                const okButton = document.createElement('button');
-                okButton.textContent = 'OK';
-                okButton.className = 'px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150';
-                okButton.onclick = () => customDialog.classList.remove('active');
-                customDialogButtons.appendChild(okButton);
+    if (type === 'confirm') {
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Mégse';
+        cancelButton.className = 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-150';
+        cancelButton.onclick = () => {
+            closeCustomDialog(); // Hozzuk létre ezt a segédfüggvényt!
+            if (confirmResolve) {
+                confirmResolve(false);
+                confirmResolve = null; // Fontos: nullázzuk a következő használathoz
             }
-            customDialog.classList.add('active');
-            requestAnimationFrame(() => { customDialog.querySelector('.modal-content').classList.add('modal-enter-active'); });
-        }
-        function showCustomAlert(message, title = 'Értesítés') { showCustomDialog(message, 'alert', title); }
+        };
+        customDialogButtons.appendChild(cancelButton);
 
-// Teremfoglaló fájlban:
+        const okButton = document.createElement('button');
+        okButton.textContent = 'OK';
+        okButton.className = 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-150';
+        okButton.onclick = () => {
+            closeCustomDialog(); // Hozzuk létre ezt a segédfüggvényt!
+            if (confirmResolve) {
+                confirmResolve(true);
+                confirmResolve = null; // Fontos: nullázzuk a következő használathoz
+            }
+        };
+        customDialogButtons.appendChild(okButton);
+
+    } else { // type === 'alert'
+        const okButton = document.createElement('button');
+        okButton.textContent = 'OK';
+        okButton.className = 'px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150';
+        okButton.onclick = () => {
+            closeCustomDialog(); // Hozzuk létre ezt a segédfüggvényt!
+        };
+        customDialogButtons.appendChild(okButton);
+    }
+
+    customDialog.classList.add('active');
+    requestAnimationFrame(() => { customDialog.querySelector('.modal-content').classList.add('modal-enter-active'); });
+}
+
+// ÚJ SEGÉDFÜGGVÉNY A MODAL BEZÁRÁSÁHOZ ÉS ANIMÁCIÓHOZ
+function closeCustomDialog() {
+    const content = customDialog.querySelector('.modal-content');
+    content.classList.remove('modal-enter-active');
+    content.classList.add('modal-leave-active');
+    setTimeout(() => {
+        customDialog.classList.remove('active');
+        content.classList.remove('modal-leave-active');
+    }, 300); // Megfelel a CSS transition idejének
+}
+
+// A showCustomAlert függvény változatlan marad
+function showCustomAlert(message, title = 'Értesítés') {
+    showCustomDialog(message, 'alert', title);
+}
+
+// A showCustomConfirm függvény változatlan marad (ezt hívja a handleLogout)
 function showCustomConfirm(message, title = 'Megerősítés') {
     return new Promise((resolve) => {
         confirmResolve = resolve;
-        const content = customDialog.querySelector('.modal-content');
-        // Ensure modal is visible before applying active class for animation
-        if (!customDialog.classList.contains('active')) {
-             customDialog.classList.add('active');
-             requestAnimationFrame(() => {
-                 content.classList.add('modal-enter-active');
-                 showCustomDialog(message, 'confirm', title);
-             });
-        } else {
-             // If already active, just update content and buttons
-             showCustomDialog(message, 'confirm', title);
-        }
+        showCustomDialog(message, 'confirm', title);
     });
 }
 
