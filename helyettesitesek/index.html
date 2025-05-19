@@ -314,15 +314,15 @@
 <body class="bg-gray-100 font-sans">
 
     <header id="app-header" class="bg-indigo-600 text-white p-4 shadow-md sticky top-0 z-30">
-        <div class="container mx-auto flex flex-wrap justify-between items-center gap-y-2">
-            <div class="flex items-center space-x-3">
+<div class="container mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-3">
                  <img src="logo.png" alt="SZAG Logo" class="h-8 w-8 rounded-full" onerror="this.style.display='none'">
                 <h1 class="text-xl font-bold cursor-pointer" onclick="navigateTo('#/')">SZAG Helyettesítések</h1>
             </div>
-            <nav class="flex items-center space-x-2 sm:space-x-4">
-                <div id="nav-links" class="flex items-center space-x-2 sm:space-x-4">
+            <nav class="flex items-center">
+                <div id="nav-links" class="flex items-center">
                      </div>
-                 <div id="header-right-section" class="flex items-center space-x-4">
+                 <div id="header-right-section" class="flex items-center">
                      <span id="current-time" class="text-sm text-indigo-200 hidden embed-view-element">--:--:--</span>
                      <div id="user-status" class="flex items-center space-x-2">
                          <span class="text-sm text-indigo-200">Betöltés...</span>
@@ -608,60 +608,57 @@ function updateUIBasedOnAuthState(user) {
              console.log("updateUIBasedOnAuthState called with user:", user ? user.uid : 'null');
              currentUser = user; // Fontos: currentUser beállítása itt
 
-            if (user) {
-                 console.log("User signed in. Updating UI and listeners...");
-                 loginPopup.classList.add('hidden');
-                 // Felhasználó nevének és státuszának megjelenítése a kijelentkezés gomb előtt
-                 const userNameDisplay = escapeHtml(user.nickname || user.displayName || user.email);
-                 const adminStatusDisplay = user.isAdmin ? '<span class="text-yellow-300">(Admin)</span>' : '';
-                 // MÓDOSÍTVA: Eltávolítva a "hidden lg:inline" osztályok a névről a span elemből.
-                 userStatusDiv.innerHTML = `
-                     <span class="text-sm mr-2" title="${escapeHtml(user.email)}">${userNameDisplay} ${adminStatusDisplay}</span>
-                     <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold py-1 px-2 sm:px-3 rounded transition duration-150 ease-in-out">
-                         Kijelentkezés
-                     </button>
-                 `;
-                 const logoutBtn = document.getElementById('logout-button');
-                 if (logoutBtn) {
-                     // Eseményfigyelő hozzáadása a kijelentkezés gombhoz
-                     logoutBtn.removeEventListener('click', handleLogout); // Biztonsági okból először eltávolítjuk
-                     logoutBtn.addEventListener('click', handleLogout);
-                 }
-                 // Admin listenerek (felhasználók, pending) és edit listenerek (helyettesítések) beállítása,
-                 // ha van bejelentkezett felhasználó.
-                 // A setupAdminFirestoreListeners belső ellenőrzése kezeli, hogy kihez milyen listenerek kellenek.
-                 // Csak akkor állítjuk be a listenereket, ha még nincsenek beállítva bejelentkezés után.
-                 if (user && unsubscribeAdminListeners.length === 0) {
-                     setupAdminFirestoreListeners();
-                 }
+             if (user) {
+                console.log("User signed in. Updating UI and listeners...");
+                loginPopup.classList.add('hidden');
+                const userNameDisplay = escapeHtml(user.nickname || user.displayName || user.email);
+                // Space added before span only if admin status exists
+                const adminStatusDisplay = user.isAdmin ? ' <span class="text-yellow-300">(Admin)</span>' : '';
 
-            } else { // User is null (logged out)
-                 console.log("User signed out. Updating UI and listeners...");
-                 // Csak akkor frissítsük a UI-t, ha nem a kezdeti undefined állapot az oldal betöltésekor.
-                 if (currentUser !== undefined) {
-                     userStatusDiv.innerHTML = `<button id="show-login-button" class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-semibold py-1 px-2 sm:px-3 rounded">Bejelentkezés</button>`;
-                     const loginBtn = document.getElementById('show-login-button');
-                     if (loginBtn) {
-                         loginBtn.removeEventListener('click', () => showLoginPopup()); // Biztonsági okból először eltávolítjuk
-                         loginBtn.addEventListener('click', () => showLoginPopup());
-                     }
-                     // Leiratkozás az összes admin/edit listenerről kijelentkezéskor.
-                     unsubscribeAdminFirestoreListeners();
-                     allowedUsers = []; // Felhasználó listák ürítése
-                     pendingUsers = [];
-                     announcementBar.classList.add('hidden'); // Hirdetmény elrejtése
-                 } else {
-                     // Kezdeti állapot (currentUser undefined) - az alkalmazás még töltődik.
-                     console.log("Auth state unknown during initial load - UI will be set after initial data load.");
-                     userStatusDiv.innerHTML = `<span class="text-sm text-indigo-200">Betöltés...</span>`;
-                     announcementBar.classList.add('hidden');
-                 }
-            }
-            // Navigációs linkek frissítése az új auth state alapján.
-            updateNavLinks();
-             // Hirdetmény megjelenítése az új auth state alapján (a displayAnnouncement belsőleg ellenőrzi az admin státuszt).
-             displayAnnouncement();
+                // MÓDOSÍTVA: Piros gomb lakat ikonnal balra és névvel, egy sorban a gombon belül
+                userStatusDiv.innerHTML = `
+                    <button id="logout-button" class="inline-flex items-center space-x-1 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold py-1 px-1.5 rounded transition duration-150 ease-in-out">
+                        <svg class="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                        <span>${userNameDisplay}${adminStatusDisplay}</span>                     </button>
+                `; // Hozzáadva: inline-flex, items-center, space-x-1 a gombhoz, SVG ikon, név spannen belül. Text méret text-sm sm:text-base-re váltva.
 
+                // Az admin listenerek beállítása (ha még nincsenek beállítva)
+                if (user && unsubscribeAdminListeners.length === 0) {
+                    setupAdminFirestoreListeners();
+                }
+
+
+            } else { // User is null (logged out)
+                // ... (marad a régi kód a "Bejelentkezés" gombbal) ...
+                console.log("User signed out. Updating UI and listeners...");
+                // Csak akkor frissítsük a UI-t, ha nem a kezdeti undefined állapot az oldal betöltésekor.
+                if (currentUser !== undefined) {
+                    userStatusDiv.innerHTML = `<button id="show-login-button" class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-semibold py-1 px-2 sm:px-3 rounded">Bejelentkezés</button>`;
+                    const loginBtn = document.getElementById('show-login-button');
+                    if (loginBtn) {
+                        loginBtn.removeEventListener('click', () => showLoginPopup()); // Biztonsági okból először eltávolítjuk
+                        loginBtn.addEventListener('click', () => showLoginPopup());
+                    }
+                    // Leiratkozás az összes admin/edit listenerről kijelentkezéskor.
+                    unsubscribeAdminFirestoreListeners();
+                    allowedUsers = []; // Felhasználó listák ürítése
+                    pendingUsers = [];
+                    announcementBar.classList.add('hidden'); // Hirdetmény elrejtése
+                } else {
+                    // Kezdeti állapot (currentUser undefined) - az alkalmazás még töltődik.
+                    console.log("Auth state unknown during initial load - UI will be set after initial data load.");
+                    userStatusDiv.innerHTML = `<span class="text-sm text-indigo-200">Betöltés...</span>`;
+                    announcementBar.classList.add('hidden');
+                }
+            }
+            // Navigációs linkek frissítése az új auth state alapján.
+            updateNavLinks();
+            // Hirdetmény megjelenítése az új auth state alapján (a displayAnnouncement belsőleg ellenőrzi az admin státuszt).
+            displayAnnouncement();
+
+            // ... (marad a renderView hívás) ...
             // --- ADD THIS SECTION ---
             // After updating UI elements based on auth state, explicitly re-render the current view
             // to reflect any changes in visible content or interactive elements.
@@ -691,30 +688,26 @@ function updateUIBasedOnAuthState(user) {
             // }
          }
          function updateNavLinks() {
-            let linksHtml = `
-                 <button onclick="navigateTo('#/')" class="hover:bg-indigo-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'public-main' ? 'bg-indigo-800 font-semibold' : ''}">Főoldal</button>
-            `;
-            // Show edit link if user is logged in (regardless of admin status)
-            if (currentUser) {
-                 linksHtml += `
-                     <button onclick="navigateTo('#/edit')" class="hover:bg-green-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'edit' ? 'bg-green-800 font-semibold' : 'bg-green-600'}">Szerkesztés</button>
-                 `;
-            }
-             // Show admin link only if user is admin
-            if (currentUser?.isAdmin) {
-                 linksHtml += `
-                     <button onclick="navigateTo('#/admin')" class="hover:bg-purple-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'admin' ? 'bg-purple-800 font-semibold' : 'bg-purple-600'}">Admin</button>
-                 `;
-            }
-             // Publikus nézet (#/embed) link eltávolítva a navigációból,
-             // de a routingban meghagyjuk, ha valaki közvetlenül próbálja elérni
-             /*
-             linksHtml += `
-                 <button onclick="navigateTo('#/embed')" class="hover:bg-gray-700 px-2 py-1 sm:px-3 rounded text-sm sm:text-base ${currentView === 'public-embed' ? 'bg-gray-800 font-semibold' : 'bg-gray-600'}">Publikus nézet</button>
-             `;
-             */
-            navLinksDiv.innerHTML = linksHtml;
-        }
+            // MÓDOSÍTVA: Navigációs gombok stílusa (nincs alap szín, aktív gomb kék)
+            let linksHtml = `
+                <button onclick="navigateTo('#/')" class="text-white px-2 py-1 sm:px-3 rounded text-sm sm:text-base hover:bg-indigo-700 transition duration-150 ease-in-out ${currentView === 'public-main' ? 'bg-blue-600 font-semibold' : ''}">Főoldal</button>
+            `; // Eltávolítva az alap bg-indigo-600, hozzáadva a kék aktív státusz
+
+            // Show edit link if user is logged in (regardless of admin status)
+            if (currentUser) {
+                linksHtml += `
+                    <button onclick="navigateTo('#/edit')" class="text-white px-2 py-1 sm:px-3 rounded text-sm sm:text-base hover:bg-green-700 transition duration-150 ease-in-out ${currentView === 'edit' ? 'bg-blue-600 font-semibold' : ''}">Szerkesztés</button>
+                `; // Eltávolítva az alap bg-green-600, hozzáadva a kék aktív státusz
+            }
+            // Show admin link only if user is admin
+            if (currentUser?.isAdmin) {
+                linksHtml += `
+                    <button onclick="navigateTo('#/admin')" class="text-white px-2 py-1 sm:px-3 rounded text-sm sm:text-base hover:bg-purple-700 transition duration-150 ease-in-out ${currentView === 'admin' ? 'bg-blue-600 font-semibold' : ''}">Admin</button>
+                `; // Eltávolítva az alap bg-purple-600, hozzáadva a kék aktív státusz
+            }
+            // Publikus nézet (#/embed) link továbbra sincs a navigációban
+            navLinksDiv.innerHTML = linksHtml;
+        }
 
 
         /** Renderelő Függvények **/
@@ -1947,6 +1940,22 @@ function updateUIBasedOnAuthState(user) {
             googleLoginButton.addEventListener('click', handleGoogleLogin);
             loginPopupCloseButton.addEventListener('click', () => loginPopup.classList.add('hidden'));
 
+            // MÓDOSÍTVA: Delegált eseményfigyelő a user-status div-en a kijelentkezés ikonhoz
+// MÓDOSÍTVA: Delegált eseményfigyelő a user-status div-en a kijelentkezés gombon (rajta a név)
+            userStatusDiv.addEventListener('click', async (event) => {
+                // MÓDOSÍTVA: A button element ID-jét célozzuk, ami most a nevet is tartalmazza
+                const logoutButton = event.target.closest('#logout-button'); // <<< EZT A SORT CSERÉLED LE
+                if (logoutButton) {
+                    console.log("Logout button clicked."); // Log frissítése
+                    // Megerősítő popup megjelenítése
+                    const confirmed = await showCustomConfirm("Biztosan kijelentkezel?", "Kijelentkezés");
+                    if (confirmed) {
+                        handleLogout(); // Csak megerősítés esetén hívjuk meg a kijelentkezés logikát
+                    }
+                }
+            });
+
+            // ... (marad a többi event listener) ...
              // Eseményfigyelők a szerkesztő nézet elemeihez (delegálással)
              editViewDiv.addEventListener('change', (event) => {
                  // Only allow changes if the user is logged in
