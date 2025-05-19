@@ -68,14 +68,111 @@
              font-size: 0.875rem;
          }
 
+        /* Styles for the popup */
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            overflow-y: auto; /* Make popup scrollable if content is long */
+            padding: 20px; /* Add some padding for scrolling */
+        }
+         .popup-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 0.5rem;
+            max-width: 600px; /* Increased max-width for more content */
+            text-align: left; /* Align text to the left for readability */
+            position: relative; /* Needed for positioning content, but close button is fixed */
+             width: 100%; /* Make popup content take full width up to max-width */
+             margin-top: 30px; /* Add margin at the top to not be hidden by close button */
+             margin-bottom: 30px; /* Add margin at the bottom */
+        }
+        .popup-content h2, .popup-content h3, .popup-content h4 {
+            text-align: center; /* Center headings */
+             margin-bottom: 10px;
+        }
+         /* Specific styles for headings within popup content for better hierarchy */
+         .popup-content h2 {
+             font-size: 1.75rem; /* text-2xl */
+             font-weight: 700; /* bold */
+             color: #1f2937; /* Dark gray */
+         }
+         .popup-content h3 {
+             font-size: 1.5rem; /* text-xl */
+             font-weight: 600; /* semibold */
+             color: #1f2937; /* Dark gray */
+             margin-top: 15px; /* Add some space above secondary headings */
+         }
+         .popup-content h4 {
+              font-size: 1.25rem; /* text-lg */
+              font-weight: 600; /* semibold */
+              color: #1f2937; /* Dark gray */
+              margin-top: 10px; /* Add some space above tertiary headings */
+         }
+
+
+         .popup-content p, .popup-content ul {
+             margin-bottom: 10px;
+         }
+         .popup-content ul {
+             padding-left: 20px; /* Indent list items */
+         }
+         .popup-content li {
+             margin-bottom: 5px;
+         }
+        /* Style for strong tags within popup */
+         .popup-content strong {
+             font-weight: 700; /* Ensure boldness */
+             color: #1f2937; /* Dark gray text for emphasis */
+         }
+
+
+        .close-button {
+            position: fixed; /* Position relative to the viewport */
+            top: 10px; /* 10px from the top */
+            right: 10px; /* 10px from the right */
+            font-size: 1.5rem;
+            cursor: pointer;
+             color: #6b7280; /* Gray color for close button */
+            z-index: 1001; /* Ensure it's above the popup content */
+            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white background */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+         .close-button:hover {
+             color: #1f2937; /* Darker gray on hover */
+             background-color: rgba(255, 255, 255, 1);
+         }
+
+
+        /* New style for blue link cards */
+        .link-card-blue {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+        }
+        .link-card-blue svg {
+            color: white; /* White icon color */
+        }
+
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
 
     <header class="bg-indigo-700 text-white p-6 shadow-md">
         <div class="container mx-auto text-center">
-            <img src="logo.png" alt="Cég logója" class="mx-auto">
-            <h1 class="text-4xl font-bold mb-2">Szerb Antal Gimnázium</h1>
+            <img src="logo.png" alt="Cég logója" class="mx-auto"> <h1 class="text-4xl font-bold mb-2">Szerb Antal Gimnázium</h1>
             <p class="text-xl text-indigo-200">e-SZAG portálok</p>
         </div>
     </header>
@@ -84,7 +181,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <a href="/teremfoglalo" class="link-card">
                  <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 0 011 1v5m-4 0h4" />
                  </svg>
                 Teremfoglaló
             </a>
@@ -107,24 +204,121 @@
                  </svg>
                 Emelt
             </a>
+
+            <a href="#" class="link-card link-card-blue" onclick="openHelpdeskPopup()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                </svg>
+                Kapcsolatfelvétel (Helpdesk)
+            </a>
+
+            <a href="#" class="link-card link-card-blue" onclick="openHelpPopup()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Súgó
+            </a>
         </div>
     </main>
 
-    <footer class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
-        <a href="mailto:konczts@szag.hu" class="contact-button">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-            </svg>
-            Kapcsolatfelvétel a fejlesztővel
-        </a>
-        <a href="mailto:rg@szag.hu" class="contact-button">
-             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-               <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-             </svg>
-            Kapcsolatfelvétel a rendszergazdával
-        </a>
-    </footer>
+    <footer class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4" style="display: none;">
+        </footer>
+
+    <div id="helpPopup" class="popup">
+        <div class="popup-content">
+            <span class="close-button" onclick="closeHelpPopup()">&times;</span>
+            <h2 class="text-2xl font-bold">Súgó</h2>
+            <p>Ez az e-SZAG portál a Szerb Antal Gimnázium belső webes alkalmazásait gyűjti össze egy helyen.</p>
+
+            <h3 class="text-xl font-semibold">Bejelentkezés</h3>
+            <p>Az alkalmazások használatához <strong>iskolai Google-fiókkal</strong> tudsz bejelentkezni. Az <strong>adminisztrátor által meghívott felhasználók</strong> az első bejelentkezésükkor kapják meg a jogosultságukat. A <strong>nem bejelentkezett felhasználók</strong> csak a publikus nézeteket (heti és napi összesítő teremfoglaló, helyettesítések táblázat) érhetik el.</p>
+
+            <h3 class="text-xl font-semibold">Alkalmazások és jogosultságok</h3>
+
+            <h4 class="text-lg font-semibold">Teremfoglaló</h4>
+            <p>A Teremfoglaló alkalmazás az iskolai termek heti és napi foglaltságának megtekintésére, valamint foglalások rögzítésére szolgál.</p>
+            <ul>
+                <li><strong>Bejelentkezett felhasználók:</strong> Megtekinthetik a termek foglaltságát, és saját, <strong>egyszeri</strong> foglalásokat hozhatnak létre és törölhetnek.</li>
+                <li><strong>Adminisztrátorok:</strong> Teljes hozzáféréssel rendelkeznek. Kezelhetik a termek listáját, az idősávokat, a felhasználókat, és bármilyen típusú (egyszeri vagy rendszeres) foglalást rögzíthetnek, módosíthatnak (admin felületen keresztül) vagy törölhetnek. Rendszeres foglalásokat is lemondhatnak adott napokra.</li>
+            </ul>
+
+            <h4 class="text-lg font-semibold">Helyettesítések</h4>
+            <p>A Helyettesítések alkalmaz a napi helyettesítési adatok közzétételére és szerkesztésére szolgál.</p>
+            <ul>
+                <li><strong>Bejelentkezett felhasználók:</strong> Megtekinthetik a napi helyettesítési táblázatot, és <strong>szerkeszthetik</strong> a napi helyettesítési adatokat (táblázat tartalma, státusz, üzenet).</li>
+                <li><strong>Adminisztrátorok:</strong> Teljes hozzáféréssel rendelkeznek. Kezelhetik a felhasználók listáját, és az admin hirdetményt.</li>
+            </ul>
+
+             <h4 class="text-lg font-semibold">InfoTV Admin</h4>
+            <p>Az InfoTV Admin felület az iskolai folyosókon elhelyezett kijelzők tartalmának kezelésére szolgál.</p>
+            <ul>
+                <li><strong>Adminisztrátorok:</strong> Teljes hozzáféréssel rendelkeznek.
+                    <ul>
+                        <li>Megtekinthetik az <strong>eszközök állapotát</strong> (online/offline, utolsó ping).</li>
+                        <li>Kezelhetik a <strong>normál hirdetéseket</strong> (képek, beágyazott linkek, aktuális sablon) - hozzáadhatnak, szerkeszthetnek, törölhetnek, sorrendezhetnek, aktiválhatnak/inaktiválhatnak.</li>
+                        <li>Kezelhetik a <strong>havária módot</strong> (azonnal megjelenő sürgős hirdetések) - hozzáadhatnak, aktiválhatnak, törölhetnek havária diákat.</li>
+                        <li>Elvégezhetik a <strong>hibaelhárítást</strong> (pl. összes eszköz oldalának frissítése).</li>
+                        <li>Megtekinthetik a rendszer <strong>naplóbejegyzéseit</strong>.</li>
+                        <li>Kezelhetik a <strong>felhasználók listáját</strong> (engedélyezett és meghívott felhasználók, admin státusz adása/elvétele).</li>
+                    </ul>
+                </li>
+            </ul>
+
+             <p class="text-sm text-gray-600 italic mt-4">Az Emelt portál súgója az adott alkalmazáson belül érhető el, ha van.</p>
+        </div>
+    </div>
+
+    <div id="helpdeskPopup" class="popup">
+        <div class="popup-content">
+            <span class="close-button" onclick="closeHelpdeskPopup()">&times;</span>
+            <h2 class="text-2xl font-bold">Kapcsolatfelvétel (Helpdesk)</h2>
+            <p>Elérhet minket emailben:</p>
+            <p><a href="mailto:helpdesk@szag.hu" class="text-blue-600">helpdesk@szag.hu</a></p>
+        </div>
+    </div>
+
+
+    <script>
+        function openHelpPopup() {
+            document.getElementById('helpPopup').style.display = 'flex';
+        }
+
+        function closeHelpPopup() {
+            document.getElementById('helpPopup').style.display = 'none';
+        }
+
+        function openHelpdeskPopup() {
+            document.getElementById('helpdeskPopup').style.display = 'flex';
+        }
+
+        function closeHelpdeskPopup() {
+            document.getElementById('helpdeskPopup').style.display = 'none';
+        }
+
+        // Close popups when clicking outside the content
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('helpPopup')) {
+                closeHelpPopup();
+            }
+            if (event.target == document.getElementById('helpdeskPopup')) {
+                closeHelpdeskPopup();
+            }
+        }
+
+        // Close popups when pressing the Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape") {
+                if (document.getElementById('helpPopup').style.display === 'flex') {
+                    closeHelpPopup();
+                }
+                 if (document.getElementById('helpdeskPopup').style.display === 'flex') {
+                    closeHelpdeskPopup();
+                }
+            }
+        });
+
+    </script>
 
 </body>
 </html>

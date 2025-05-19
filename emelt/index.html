@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SZAG Emelt óra jelentkezés</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Alap stílusok a mellékelt fájlból - adaptálva */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #4f46e5; animation: spin 1s linear infinite; }
+        .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 50; padding: 1rem; opacity: 0; transition: opacity 300ms ease-in-out; pointer-events: none; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background-color: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); transform: scale(0.95); transition: transform 300ms ease-in-out; max-width: 500px; width: 100%; }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .hidden { display: none !important; }
+
+        /* Admin/Action overlay */
+        /* Áthelyezve a fő tartalom fölé */
+         #action-overlay { position: absolute; inset: 0; background-color: rgba(255, 255, 255, 0.75); display: flex; justify-content: center; align-items: center; z-index: 20; }
+         #action-overlay.hidden { display: none; }
+         #action-overlay .spinner { width: 24px; height: 24px; }
+
+
+        /* Betöltési állapot */
+        .view-loading::after { content: 'Adatok betöltése...'; display: block; text-align: center; padding: 2rem; color: #6b7280; font-style: italic; }
+
+        /* Teljes képernyős elrendezés */
+        html, body { height: 100%; }
+        body { display: flex; flex-direction: column; }
+        #main-content { flex-grow: 1; overflow-y: auto; padding-bottom: 60px; /* Hely a láblécnek */ }
+        footer { flex-shrink: 0; }
+
+        /* Publikus/Foglalási nézet táblázat stílusok */
+         #public-classes-view table,
+         #admin-classes-view table { /* Admin óra listázás is használhatja */
+             width: 100%;
+             border-collapse: collapse;
+         }
+         #public-classes-view table th,
+         #public-classes-view table td,
+          #admin-classes-view table th,
+          #admin-classes-view table td {
+             padding: 0.5rem 0.75rem;
+             border: 1px solid #e5e7eb; /* gray-200 */
+             text-align: left; /* Balra igazítás */
+             /* white-space: pre-wrap; Megőrzi a sortöréseket és szóközöket (opcionális jelentkezéshez) */
+             word-break: break-word; /* Sortörés hosszú szavaknál */
+         }
+         #public-classes-view table th,
+          #admin-classes-view table th {
+             background-color: #f3f4f6; /* gray-100 */
+             font-weight: bold;
+             text-align: center; /* Fejlécek középre */
+         }
+          #public-classes-view table tr:nth-child(even),
+          #admin-classes-view table tr:nth-child(even) {
+              background-color: #f9fafb; /* gray-50 */
+          }
+
+
+        /* Nagy hiba/infó üzenet stílus */
+        .large-message {
+            font-size: 4vmin; /* Nagy betűméret viewport alapján */
+            font-weight: bold;
+            text-align: center;
+            margin-top: 5vh; /* Függőleges margó viewport alapján */
+            color: #4b5563; /* gray-700 */
+            padding: 0 1rem; /* Kis oldalsó padding */
+        }
+         .large-message .emoji {
+             display: block;
+             font-size: 8vmin; /* Nagy emoji méret viewport alapján */
+             margin-bottom: 2vh; /* Függőleges margó viewport alapján */
+         }
+
+         /* Osztály bekérő modal stílus */
+         #class-input-modal .modal-content {
+              max-width: 400px;
+         }
+         #class-input-modal label {
+              display: block;
+              font-weight: bold;
+              margin-bottom: 0.5rem;
+              color: #374151; /* gray-700 */
+         }
+         #class-input-modal input {
+              width: 100%;
+              padding: 0.75rem;
+              border: 1px solid #d1d5db; /* gray-300 */
+              border-radius: 0.375rem; /* rounded-md */
+              box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+              font-size: 1rem;
+              color: #374151; /* gray-700 */
+              focus:outline-none focus:ring-indigo-500 focus:border-indigo-500;
+         }
+         #class-input-modal button {
+             display: inline-flex;
+             align-items: center;
+             justify-content: center;
+             padding: 0.75rem 1.5rem;
+             border-radius: 0.375rem;
+             font-weight: bold;
+             color: white;
+             background-color: #4f46e5; /* indigo-600 */
+             hover:bg-indigo-700 transition duration-150 ease-in-out;
+             border: none;
+             cursor: pointer;
+         }
+
+
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <header id="app-header" class="bg-indigo-600 text-white p-4 shadow-md sticky top-0 z-30">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <img src="címer.png" alt="SZAG Címer" class="h-8 w-8 rounded-full" onerror="this.style.display='none'">
+                <h1 class="text-xl font-bold cursor-pointer" onclick="navigateTo('#/')">SZAG Emelt óra jelentkezés</h1>
+            </div>
+            <nav class="flex items-center">
+                <div id="nav-links" class="flex items-center space-x-2">
+                    </div>
+                <div id="header-right-section" class="flex items-center ml-4">
+                     <div id="user-status" class="flex items-center space-x-2">
+                         <span class="text-sm text-indigo-200">Betöltés...</span>
+                     </div>
+                 </div>
+            </nav>
+        </div>
+    </header>
+
+     <div id="announcement-bar" class="hidden container mx-auto mt-2 p-3 text-center text-sm rounded shadow bg-yellow-100 text-yellow-800">
+         <span id="announcement-message"></span>
+     </div>
+
+    <main id="main-content" class="container mx-auto mt-4 pb-16 relative">
+         <div id="action-overlay" class="hidden flex-col"><div class="spinner"></div> <span class="ml-3 text-gray-700">Folyamatban...</span></div>
+
+         <div id="loading-view" class="flex flex-col justify-center items-center h-64 text-xl text-gray-600">
+             <div class="spinner mb-4"></div>
+             <p>Alkalmazás betöltése...</p>
+         </div>
+
+         <div id="error-view" class="hidden p-4 text-center text-red-700 bg-red-100 rounded-lg"></div>
+
+         <div id="public-classes-view" class="hidden view-loading px-4">
+             <div class="flex flex-col items-center justify-center p-4">
+                  <h2 class="text-2xl font-bold text-indigo-700 mb-4">Elérhető Emelt Órák</h2>
+                  <div class="w-full max-w-4xl overflow-x-auto shadow-md rounded-lg border border-gray-200 bg-white p-4">
+                     </div>
+              </div>
+         </div>
+
+         <div id="user-registration-view" class="hidden view-loading px-4">
+              <div class="flex flex-col items-center justify-center p-4">
+                  <h2 class="text-2xl font-bold text-indigo-700 mb-4">Jelentkezés Emelt Órákra</h2>
+                   <p id="user-class-info" class="text-gray-700 mb-6"></p>
+                  <div class="w-full max-w-4xl overflow-x-auto shadow-md rounded-lg border border-gray-200 bg-white p-4">
+                     </div>
+              </div>
+         </div>
+
+         <div id="admin-classes-view" class="hidden view-loading px-4">
+              <div class="p-4 md:p-6 bg-white rounded-lg shadow space-y-6">
+                   <h2 class="text-2xl font-bold text-center text-indigo-700">Adminisztráció - Órák</h2>
+                   <div class="flex justify-end mb-4">
+                       <button id="add-class-button" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150 text-sm">Új Óra Hozzáadása</button>
+                   </div>
+                   <div id="admin-class-list">
+                       <p class="text-gray-500 italic">Órák betöltése...</p>
+                   </div>
+               </div>
+         </div>
+
+         <div id="admin-users-view" class="hidden view-loading px-4">
+              <div class="p-4 md:p-6 bg-white rounded-lg shadow space-y-6">
+                   <h2 class="text-2xl font-bold text-center text-indigo-700">Adminisztráció - Felhasználók</h2>
+                   <section>
+                        <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Engedélyezett Felhasználók</h3>
+                        <ul id="admin-allowed-users-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto border rounded p-2">
+                             <li class="text-gray-500 italic">Felhasználók betöltése...</li>
+                         </ul>
+                        <h4 class="text-lg font-semibold mb-3 text-gray-800 border-b pb-2">Meghívott Felhasználók (Email Alapú)</h4>
+                         <ul id="admin-pending-users-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto border rounded p-2">
+                             <li class="text-gray-500 italic">Meghívottak betöltése...</li>
+                         </ul>
+                         <div class="flex flex-col sm:flex-row items-end space-y-2 sm:space-y-0 sm:space-x-2 border-t pt-4">
+                             <div class="flex-grow w-full sm:w-1/3">
+                                 <label for="newPendingUserEmail" class="block text-sm font-medium text-gray-700 mb-1">Új felhasználó Email címe:</label>
+                                 <input type="email" id="newPendingUserEmail" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="user@szag.hu">
+                             </div>
+                              <div class="flex-grow w-full sm:w-1/3">
+                                 <label for="newPendingUserNickname" class="block text-sm font-medium text-gray-700 mb-1">Megj. név/Becenév (opc.):</label>
+                                 <input type="text" id="newPendingUserNickname" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. Kovács János">
+                              </div>
+                             <div class="flex items-center h-10 pt-2 sm:pt-0">
+                                 <input type="checkbox" id="newPendingUserIsAdmin" class="admin-input mr-2 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                 <label for="newPendingUserIsAdmin" class="text-sm font-medium text-gray-700">Legyen Admin?</label>
+                             </div>
+                             <button id="add-pending-user-button" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150 h-10 w-full sm:w-auto">Meghívás</button>
+                         </div>
+                         <p class="text-xs text-gray-500 mt-2">Csak @szag.hu domainből érkező email címet adj meg. A felhasználó az első bejelentkezése után kapja meg a jogosultságot és ekkor kérjük be az osztályát is.</p>
+                     </section>
+                   <section>
+                         <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Hirdetmény/Üzenet a Főoldalra (Adminoknak látható)</h3>
+                         <textarea id="admin-announcement" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" rows="3" placeholder="Írj ide egy rövid üzenetet... (üresen hagyva törlődik)"></textarea>
+                         <div class="text-right mt-2">
+                             <button id="save-announcement-button" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">Üzenet Mentése</button>
+                         </div>
+                     </section>
+               </div>
+         </div>
+
+        <div id="class-modal" class="modal-overlay">
+             <div class="modal-content">
+                 <h3 id="class-modal-title" class="text-xl font-bold mb-4 text-indigo-700">Új Óra Hozzáadása</h3>
+                 <form id="class-form" class="space-y-4">
+                     <div>
+                         <label for="class-name" class="block text-sm font-medium text-gray-700">Óra Neve</label>
+                         <input type="text" id="class-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                     </div>
+                      <div>
+                         <label for="class-teacher" class="block text-sm font-medium text-gray-700">Tanár Neve</label>
+                         <input type="text" id="class-teacher" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                     </div>
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                         <div>
+                             <label for="class-date" class="block text-sm font-medium text-gray-700">Dátum</label>
+                             <input type="date" id="class-date" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                         </div>
+                         <div>
+                             <label for="class-time" class="block text-sm font-medium text-gray-700">Időpont / Időtartam</label>
+                             <input type="text" id="class-time" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. 14:00-15:30">
+                         </div>
+                      </div>
+                     <div>
+                         <label for="class-capacity" class="block text-sm font-medium text-gray-700">Maximális létszám</label>
+                         <input type="number" id="class-capacity" required min="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                     </div>
+                     <div>
+                         <label for="class-description" class="block text-sm font-medium text-gray-700">Leírás / Tematika (opcionális)</label>
+                         <textarea id="class-description" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                     </div>
+                     <div class="flex justify-end space-x-3">
+                         <button type="button" id="class-modal-cancel" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-150">Mégse</button>
+                         <button type="submit" id="class-modal-save" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">Mentés</button>
+                     </div>
+                 </form>
+             </div>
+         </div>
+
+         <div id="class-input-modal" class="modal-overlay">
+             <div class="modal-content">
+                 <h3 class="text-xl font-bold mb-4 text-indigo-700">Kérlek add meg az osztályodat</h3>
+                 <form id="first-login-class-form">
+                     <div class="mb-4">
+                         <label for="user-class">Osztályod:</label>
+                         <input type="text" id="user-class" required placeholder="Pl. 10.A vagy 12.B">
+                     </div>
+                     <div class="flex justify-end">
+                         <button type="submit">Mentés</button>
+                     </div>
+                 </form>
+             </div>
+         </div>
+
+
+    </main>
+
+    <div id="login-popup" class="hidden fixed bottom-0 left-0 right-0 bg-gray-800 text-white p-4 shadow-lg z-50 flex justify-center items-center flex-wrap justify-center">
+         <p id="login-popup-message" class="mr-4 mb-2 sm:mb-0">Ehhez a művelethez bejelentkezés szükséges.</p>
+         <button id="google-login-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded inline-flex items-center transition duration-150 ease-in-out">
+             <svg class="fill-current w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+             <span id="login-button-text">Bejelentkezés iskolai Google-fiókkal</span>
+             <svg id="login-spinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+         </button>
+         <button id="login-popup-close" class="ml-4 text-gray-400 hover:text-white text-2xl leading-none" title="Bezárás">&times;</button>
+     </div>
+
+     <div id="custom-dialog" class="modal-overlay">
+         <div class="modal-content max-w-sm">
+             <p id="custom-dialog-message" class="text-gray-700 mb-4 whitespace-pre-wrap"></p>
+             <div id="custom-dialog-buttons" class="flex justify-end space-x-3"></div>
+         </div>
+     </div>
+
+
+    <footer class="text-center text-gray-500 text-sm py-4 mt-auto flex items-center justify-center space-x-2">
+        <span>Készült</span>
+         <img src="címer.png" alt="SZAG Címer" class="h-5 w-5 inline-block" onerror="this.style.display='none'">
+        <span>SZAG Emelt óra jelentkezés &copy; <span id="current-year"></span></span>
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // --- Firebase Konfiguráció ---
+// FIGYELEM: CSERÉLD LE AZ ALÁBBI ADATOKAT A SAJÁT FIREBASE PROJEKTED KONFIGURÁCIÓJÁVAL!
+  const firebaseConfig = {
+    apiKey: "AIzaSyBg3EoF9HNzFWEdYUPQMlOg77kPWyQsAc0",
+    authDomain: "emelt-46a9a.firebaseapp.com",
+    projectId: "emelt-46a9a",
+    storageBucket: "emelt-46a9a.firebasestorage.app",
+    messagingSenderId: "543869863152",
+    appId: "1:543869863152:web:7f32e4aca93cb8fb32ee35"
+  };
+
+
+// --- Globális Változók ---
+let firebaseApp;
+let firestore;
+let auth;
+let googleProvider;
+let currentUser = undefined; // undefined: ismeretlen, null: kijelentkezett, {}: bejelentkezett felhasználó adatokkal
+let classesData = []; // Az összes emelt óra adat
+let allowedUsers = []; // Engedélyezett felhasználók listája (csak adminoknak)
+let pendingUsers = []; // Meghívott felhasználók listája (csak adminoknak)
+let announcement = ""; // Admin hirdetmény
+let currentView = 'loading'; // Aktuálisan megjelenített nézet
+let initialDataLoaded = false; // Jelzi, ha a kezdeti publikus adatok betöltődtek
+let authStatePromise = null; // Promise az auth state első beállítódásához
+let clockInterval = null; // Óra frissítő interval
+let dayCheckInterval = null; // Napváltás ellenőrző interval
+
+// Firebase listener leiratkozó függvények tárolása
+let unsubscribeListeners = [];
+
+
+// --- DOM Elemek Referenciái ---
+const loadingView = document.getElementById('loading-view');
+const errorView = document.getElementById('error-view');
+const publicClassesViewDiv = document.getElementById('public-classes-view'); // Publikus óra lista
+const userRegistrationViewDiv = document.getElementById('user-registration-view'); // Felhasználói foglalási nézet
+const adminClassesViewDiv = document.getElementById('admin-classes-view'); // Admin óra kezelés
+const adminUsersViewDiv = document.getElementById('admin-users-view'); // Admin felhasználó kezelés
+const actionOverlay = document.getElementById('action-overlay'); // Admin/Action overlay
+const loginPopup = document.getElementById('login-popup');
+const googleLoginButton = document.getElementById('google-login-button');
+const loginButtonText = document.getElementById('login-button-text');
+const loginSpinner = document.getElementById('login-spinner');
+const loginPopupCloseButton = document.getElementById('login-popup-close');
+const loginPopupMessage = document.getElementById('login-popup-message');
+const userStatusDiv = document.getElementById('user-status');
+const navLinksDiv = document.getElementById('nav-links');
+const announcementBar = document.getElementById('announcement-bar');
+const announcementMessageSpan = document.getElementById('announcement-message');
+const customDialog = document.getElementById('custom-dialog');
+const customDialogMessage = document.getElementById('custom-dialog-message');
+const customDialogButtons = document.getElementById('custom-dialog-buttons');
+const classModal = document.getElementById('class-modal'); // Óra szerkesztő modal
+const classModalTitle = document.getElementById('class-modal-title');
+const classForm = document.getElementById('class-form');
+const classNameInput = document.getElementById('class-name');
+const classTeacherInput = document.getElementById('class-teacher');
+const classDateInput = document.getElementById('class-date');
+const classTimeInput = document.getElementById('class-time');
+const classCapacityInput = document.getElementById('class-capacity');
+const classDescriptionInput = document.getElementById('class-description');
+const classModalCancelButton = document.getElementById('class-modal-cancel');
+const classModalSaveButton = document.getElementById('class-modal-save');
+const classInputModal = document.getElementById('class-input-modal'); // Osztály bekérő modal
+const firstLoginClassForm = document.getElementById('first-login-class-form');
+const userClassInput = document.getElementById('user-class');
+const userClassInfoSpan = document.getElementById('user-class-info'); // Felhasználói nézetben az osztály infó
+
+
+// --- Segédfüggvények ---
+function formatDateYYYYMMDD(d) { const year = d.getFullYear(); const month = (d.getMonth() + 1).toString().padStart(2, '0'); const day = d.getDate().toString().padStart(2, '0'); return `${year}-${month}-${day}`; }
+function formatFullDate(d) { return d.toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }); }
+function escapeHtml(unsafe) { return unsafe ? unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : ''; }
+function showLoginPopup(message = "Ehhez a művelethez bejelentkezés szükséges.") {
+    loginPopupMessage.textContent = message;
+    loginPopup.classList.remove('hidden');
+}
+
+// --- Egyedi Alert/Confirm Modal ---
+let confirmResolve = null;
+function showCustomDialog(message, type = 'alert') {
+    // Close any existing modals before opening a new one
+    document.querySelectorAll('.modal-overlay.active').forEach(modal => modal.classList.remove('active'));
+
+    customDialogMessage.innerHTML = escapeHtml(message).replace(/\n/g, '<br>');
+    customDialogButtons.innerHTML = '';
+
+    if (type === 'confirm') {
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Mégse';
+        cancelButton.className = 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-150';
+        cancelButton.onclick = () => { customDialog.classList.remove('active'); if (confirmResolve) confirmResolve(false); confirmResolve = null; };
+        customDialogButtons.appendChild(cancelButton);
+
+        const okButton = document.createElement('button');
+        okButton.textContent = 'OK';
+        okButton.className = 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-150';
+        okButton.onclick = () => { customDialog.classList.remove('active'); if (confirmResolve) confirmResolve(true); confirmResolve = null; };
+        customDialogButtons.appendChild(okButton);
+
+    } else { // type === 'alert'
+        const okButton = document.createElement('button');
+        okButton.textContent = 'OK';
+        okButton.className = 'px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150';
+        okButton.onclick = () => customDialog.classList.remove('active');
+        customDialogButtons.appendChild(okButton);
+    }
+    customDialog.classList.add('active');
+}
+function showCustomAlert(message) { showCustomDialog(message, 'alert'); }
+function showCustomConfirm(message) {
+    return new Promise((resolve) => {
+        confirmResolve = resolve;
+        showCustomDialog(message, 'confirm');
+    });
+}
+
+// --- Action Overlay Kezelése (pl. mentés, törlés közben) ---
+function setActionLoading(isLoading, message = 'Folyamatban...') {
+    const spinner = actionOverlay?.querySelector('.spinner');
+    const messageSpan = actionOverlay?.querySelector('span');
+    if (actionOverlay) actionOverlay.classList.toggle('hidden', !isLoading);
+    if (spinner) spinner.classList.toggle('hidden', !isLoading);
+    if (messageSpan) messageSpan.textContent = message;
+
+    // Disable interactive elements in the active view while loading
+    const activeViewElement = document.getElementById(`${currentView}-view`);
+    if (activeViewElement) {
+        const interactiveElements = activeViewElement.querySelectorAll('button, input, select, textarea, [contenteditable="true"]');
+        interactiveElements.forEach(el => {
+            if (isLoading) {
+                el.dataset.originalDisabled = el.disabled; // Save original disabled state
+                el.disabled = true;
+                if (el.contentEditable === 'true') el.dataset.originalContentEditable = 'true'; // Save original contenteditable state
+                el.contentEditable = 'false';
+            } else {
+                 if (el.dataset.originalDisabled === 'false') el.disabled = false; // Restore original disabled state
+                 if (el.dataset.originalContentEditable === 'true') el.contentEditable = 'true'; // Restore original contenteditable state
+                 delete el.dataset.originalDisabled;
+                 delete el.dataset.originalContentEditable;
+            }
+        });
+    }
+}
+
+
+// --- Firebase Inicializálás ---
+function initializeApp() {
+    console.log("initializeApp() called");
+    try {
+         if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+             throw new Error("Firebase konfiguráció hiányzik vagy nem lett beállítva.");
+         }
+        firebaseApp = firebase.initializeApp(firebaseConfig);
+        firestore = firebase.firestore();
+        auth = firebase.auth();
+        googleProvider = new firebase.auth.GoogleAuthProvider();
+        console.log("Firebase (App, Firestore, Auth) sikeresen inicializálva.");
+        setupEventListeners(); // Eseményfigyelők beállítása
+        setupFirestoreListeners(); // Firestore listenerek beállítása
+        setupAuthListener(); // Auth listener beállítása
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+        startClockAndDayCheck(); // Óra és napváltás figyelő indítása
+        console.log("initializeApp() finished successfully.");
+    } catch (error) {
+        console.error("Firebase inicializálási hiba:", error);
+        showError(`Firebase inicializálása sikertelen: ${error.message}. Kérlek ellenőrizd a konfigurációt.`);
+    }
+}
+
+// --- Nézetváltás ---
+function switchView(viewId) {
+    console.log(`Switching view to: ${viewId}`);
+    // Only switch if the view is actually different, excluding loading/error views
+    if (viewId === currentView && !['loading', 'error'].includes(viewId)) return;
+
+    currentView = viewId;
+
+    // Hide all view divs first
+    [loadingView, errorView, publicClassesViewDiv, userRegistrationViewDiv, adminClassesViewDiv, adminUsersViewDiv]
+         .forEach(el => el?.classList.add('hidden'));
+
+    // Show the target view div
+    const viewElement = document.getElementById(`${viewId}-view`);
+    if (viewElement) {
+        viewElement.classList.remove('hidden');
+        // Add loading class if data is not yet loaded for this view type
+        if (!initialDataLoaded && !['loading', 'error'].includes(viewId)) {
+             viewElement.classList.add('view-loading');
+        } else {
+             viewElement.classList.remove('view-loading');
+        }
+         // Render the view immediately if initial data is loaded
+         if (initialDataLoaded && !['loading', 'error'].includes(viewId)) {
+              console.log(`Rendering view after switch: ${viewId}`);
+              renderView();
+         } else {
+              console.log(`View ${viewId} shown, waiting for initial data or auth state to render.`);
+         }
+
+    } else {
+        console.error(`View element not found for ID: ${viewId}-view`);
+        showError(`A kért nézet (${viewId}) nem található.`);
+    }
+    updateNavLinks(); // Update navigation links based on the new view and auth state
+}
+
+
+// --- Útvonal Kezelés ---
+async function handleRouteChange() {
+    console.log(">>> handleRouteChange() called");
+    const hash = window.location.hash || '#/';
+    console.log("Current hash:", hash);
+
+     // Wait for auth state to be determined before routing
+     if (currentUser === undefined) {
+         console.log("Routing skipped: Waiting for auth state...");
+         if (authStatePromise) {
+             await authStatePromise;
+             console.log("Auth state promise resolved in handleRouteChange. Current user:", currentUser);
+         } else {
+             console.log("Routing skipped: Auth state promise not yet available.");
+             return; // Auth listener hasn't started yet
+         }
+     }
+
+    // Wait for initial public data to be loaded before routing to non-loading/error views
+    if (!initialDataLoaded && !['loading', 'error'].includes(currentView)) {
+         console.log("Routing skipped (initial data not loaded)");
+         return;
+     }
+
+
+    let targetView = '';
+
+    if (hash === '#/') {
+        // Default view: public if not logged in, user if logged in
+        targetView = currentUser ? 'user-registration' : 'public-classes';
+    } else if (hash === '#/admin/classes') {
+        if (currentUser?.isAdmin) {
+            targetView = 'admin-classes';
+        } else {
+            console.warn("Admin classes access denied.");
+            if (!currentUser) { showLoginPopup("Az admin felület megtekintéséhez bejelentkezés szükséges."); }
+            else { showCustomAlert("Nincs jogosultságod az admin felület megtekintéséhez.", "Hiba"); }
+            navigateTo('#/'); // Redirect non-admins to home
+            return;
+        }
+    } else if (hash === '#/admin/users') {
+        if (currentUser?.isAdmin) {
+            targetView = 'admin-users';
+        } else {
+            console.warn("Admin users access denied.");
+             if (!currentUser) { showLoginPopup("Az admin felület megtekintéséhez bejelentkezés szükséges."); }
+            else { showCustomAlert("Nincs jogosultságod az admin felület megtekintéséhez.", "Hiba"); }
+            navigateTo('#/'); // Redirect non-admins to home
+            return;
+        }
+    }
+     // No specific hash for user registration view, it's the default for logged-in users at '#'
+     // No specific hash for public view, it's the default for logged-out users at '#'
+    else {
+        // If hash is unrecognized, redirect to home
+        console.warn("Unknown hash, navigating to #/:", hash);
+        navigateTo('#/');
+        return;
+    }
+
+    console.log("Routing: Target view determined:", targetView);
+    switchView(targetView);
+}
+
+function navigateTo(hash) {
+    console.log("Navigating to:", hash);
+    if (window.location.hash !== hash) {
+         window.location.hash = hash; // This triggers hashchange event
+    } else {
+        // If the hash is the same, but the view might need re-rendering
+        // (e.g., after auth state change, or initial data load)
+        const targetView = (hash === '#/') ? (currentUser ? 'user-registration' : 'public-classes') : hash.substring(1).replace('admin/', 'admin-') || (currentUser ? 'user-registration' : 'public-classes');
+        if (currentView !== targetView || initialDataLoaded) { // Always re-render if initial data is loaded
+             console.log("Same hash, but re-evaluating view or re-rendering:", targetView);
+             switchView(targetView);
+        }
+    }
+}
+
+
+// --- Hiba Megjelenítés ---
+function showError(message) {
+    console.error("Showing error:", message);
+    errorView.textContent = `Hiba: ${message}`;
+    [loadingView, publicClassesViewDiv, userRegistrationViewDiv, adminClassesViewDiv, adminUsersViewDiv]
+         .forEach(el => el?.classList.add('hidden'));
+    errorView.classList.remove('hidden');
+    currentView = 'error';
+    initialDataLoaded = true; // Mark initial load complete (with error)
+}
+
+
+// --- Felhasználói Felület Frissítése ---
+async function updateUIBasedOnAuthState(user) {
+    console.log("updateUIBasedOnAuthState called with user:", user ? user.uid : 'null');
+    currentUser = user; // Important: Set currentUser here
+
+    if (user) {
+        console.log("User signed in. Updating UI...");
+        loginPopup.classList.add('hidden');
+
+        // Check if user exists in 'users' collection and has 'class' field
+        const userDocRef = firestore.collection('users').doc(user.uid);
+        try {
+            const userDoc = await userDocRef.get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                // Update currentUser object with data from Firestore (isAdmin, class, nickname)
+                currentUser.isAdmin = userData.isAdmin || false;
+                currentUser.class = userData.class || null;
+                currentUser.nickname = userData.nickname || null;
+
+                // If user data exists but class is missing, show class input modal
+                if (!currentUser.class) {
+                     console.log("User logged in but class is missing. Showing class input modal.");
+                     showClassInputModal();
+                     // Don't proceed with normal routing until class is entered
+                     return; // Exit the function here
+                }
+
+            } else {
+                 // This case should ideally be handled by the auth listener's migration logic
+                 // If somehow a user is authenticated but not in 'users' or 'pendingUsers'
+                 console.error("Authenticated user not found in 'users' collection:", user.uid);
+                 showError("Hiba: Bejelentkezett felhasználó adatai nem találhatók.");
+                 await auth.signOut().catch(e => console.error("Sign out failed after user data error:", e));
+                 return; // Exit the function
+            }
+        } catch (error) {
+            console.error("Error fetching user document:", error);
+            showError(`Hiba a felhasználói adatok betöltésekor: ${error.message}`);
+            await auth.signOut().catch(e => console.error("Sign out failed after user data fetch error:", e));
+            return; // Exit the function
+        }
+
+
+        const userNameDisplay = escapeHtml(currentUser.nickname || currentUser.displayName || currentUser.email || 'N/A');
+        const adminStatusDisplay = currentUser.isAdmin ? ' <span class="text-yellow-300">(Admin)</span>' : '';
+
+        userStatusDiv.innerHTML = `
+            <button id="logout-button" class="inline-flex items-center space-x-1 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold py-1 px-1.5 rounded transition duration-150 ease-in-out">
+                <svg class="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+                <span>${userNameDisplay}${adminStatusDisplay}</span>
+            </button>
+        `;
+
+        // Add event listener for the logout button
+        const logoutBtn = document.getElementById('logout-button');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                const confirmed = await showCustomConfirm("Biztosan kijelentkezel?", "Kijelentkezés");
+                if (confirmed) {
+                    handleLogout();
+                }
+            });
+        }
+
+
+    } else { // User is null (logged out)
+        console.log("User signed out. Updating UI...");
+        // Only update UI if it's not the initial undefined state on page load.
+        if (currentUser !== undefined) {
+            userStatusDiv.innerHTML = `<button id="show-login-button" class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-semibold py-1 px-2 sm:px-3 rounded">Bejelentkezés</button>`;
+            const loginBtn = document.getElementById('show-login-button');
+            if (loginBtn) {
+                loginBtn.removeEventListener('click', () => showLoginPopup()); // Remove previous listeners
+                loginBtn.addEventListener('click', () => showLoginPopup());
+            }
+        } else {
+             // Initial state (currentUser undefined) - app is still loading.
+             console.log("Auth state unknown during initial load - UI will be set after initial data load.");
+             userStatusDiv.innerHTML = `<span class="text-sm text-indigo-200">Betöltés...</span>`;
+        }
+    }
+    // Update navigation links based on the new auth state.
+    updateNavLinks();
+    // Display announcement based on the new auth state (displayAnnouncement checks admin status internally).
+    displayAnnouncement();
+
+    // After updating UI elements based on auth state, explicitly re-render the current view
+    // to reflect any changes in visible content or interactive elements.
+    if (initialDataLoaded && !['loading', 'error'].includes(currentView)) {
+         console.log(`Auth state changed, re-rendering current view: ${currentView}`);
+         renderView();
+    } else if (['public-classes', 'user-registration', 'admin-classes', 'admin-users'].includes(currentView)) {
+         // If initial data is not yet loaded, ensure the view is still showing
+         // the loading indicator based on the determined currentView.
+         const viewElement = document.getElementById(`${currentView}-view`);
+          if (viewElement) {
+             viewElement.classList.remove('hidden');
+             viewElement.classList.add('view-loading');
+          }
+     } else if (currentView === 'loading' || currentView === 'error') {
+          // If in loading or error state, ensure those views are displayed.
+          switchView(currentView);
+     }
+
+     // If initial data is loaded, re-evaluate the route based on the new auth state
+     if (initialDataLoaded) {
+         console.log("Initial data loaded, re-evaluating route based on auth state.");
+         handleRouteChange();
+     }
+}
+
+function updateNavLinks() {
+    let linksHtml = `
+        <button onclick="navigateTo('#/')" class="text-white px-2 py-1 sm:px-3 rounded text-sm sm:text-base hover:bg-indigo-700 transition duration-150 ease-in-out ${currentView === 'public-classes' || currentView === 'user-registration' ? 'bg-blue-600 font-semibold' : ''}">Főoldal</button>
+    `;
+
+    // Show admin links only if user is admin
+    if (currentUser?.isAdmin) {
+        linksHtml += `
+            <button onclick="navigateTo('#/admin/classes')" class="text-white px-2 py-1 sm:px-3 rounded text-sm sm:text-base hover:bg-purple-700 transition duration-150 ease-in-out ${currentView === 'admin-classes' ? 'bg-blue-600 font-semibold' : ''}">Admin (Órák)</button>
+             <button onclick="navigateTo('#/admin/users')" class="text-white px-2 py-1 sm:px-3 rounded text-sm sm:text-base hover:bg-purple-700 transition duration-150 ease-in-out ${currentView === 'admin-users' ? 'bg-blue-600 font-semibold' : ''}">Admin (Felhasználók)</button>
+        `;
+    }
+    navLinksDiv.innerHTML = linksHtml;
+}
+
+function handleGoogleLogin() {
+    if (!auth || !googleProvider) return showError("Auth szolgáltatás nem inicializálódott.");
+    googleLoginButton.disabled = true;
+    loginSpinner.classList.remove('hidden');
+    loginButtonText.textContent = 'Bejelentkezés...';
+    auth.signInWithPopup(googleProvider)
+         .then((result) => {
+             console.log("Google Sign-In successful.", result.user);
+             // The auth.onAuthStateChanged listener will handle updating UI and routing
+             // No need to manually set currentUser or call updateUIBasedOnAuthState here
+             // or reload the page, the listener chain handles it.
+         })
+         .catch((error) => {
+             console.error("Google Sign-In Error:", error);
+             if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+                 showCustomAlert(`Hiba a Google bejelentkezés során: ${error.message}`, "Hiba");
+             }
+         })
+         .finally(() => {
+             // This finally block might run if the popup is closed or an error occurs
+             // before the auth state changes and the listener fires.
+             // Ensure the button state is reset if the login popup is still visible.
+             if (loginPopup && !loginPopup.classList.contains('hidden')) {
+                 googleLoginButton.disabled = false;
+                 loginSpinner.classList.add('hidden');
+                 loginButtonText.textContent = 'Bejelentkezés iskolai Google-fiókkal';
+             }
+         });
+}
+
+async function handleLogout() {
+    if (!auth) return;
+    console.log("Logging out...");
+    setActionLoading(true, 'Kijelentkezés...');
+    try {
+        await auth.signOut();
+        console.log("Sign out successful.");
+        // The auth.onAuthStateChanged listener will handle UI update and routing
+        // No need to manually update UI or reload here.
+    } catch (error) {
+        console.error("Logout failed:", error);
+        showCustomAlert("Hiba történt a kijelentkezés során.", "Hiba");
+    } finally {
+         setActionLoading(false);
+    }
+}
+
+// --- Auth Listener ---
+function setupAuthListener() {
+     console.log("setupAuthListener() called");
+     if (!auth) return showError("Auth szolgáltatás nem inicializálódott.");
+
+     // Create a promise that resolves when the auth state is first determined
+     authStatePromise = new Promise((resolve) => {
+         const unsubscribe = auth.onAuthStateChanged(async (user) => {
+             console.log(">>> onAuthStateChanged triggered. User:", user ? user.uid : 'null');
+             let resolvedUser = null;
+
+             if (user) {
+                 // Check if the email domain is allowed
+                 if (!user.email || !user.email.endsWith('@szag.hu')) {
+                     console.warn("Unauthorized email domain:", user.email);
+                     showCustomAlert(`Csak a "@szag.hu" domainből lehet bejelentkezni. A fiókod: ${user.email}`, "Hozzáférés Megtagadva");
+                     await auth.signOut().catch(e => console.error("Sign out failed for unauthorized user:", e));
+                     resolvedUser = null;
+                 } else {
+                     console.log("User signed in with allowed domain. Checking authorization for UID:", user.uid);
+                     const userDocRef = firestore.collection('users').doc(user.uid);
+                     try {
+                         console.log("Attempting to get user document from 'users'...");
+                         const userDoc = await userDocRef.get();
+                         if (userDoc.exists) {
+                             console.log("User found in 'users'. Data:", userDoc.data());
+                             const userData = userDoc.data();
+                             resolvedUser = { uid: user.uid, displayName: user.displayName, email: user.email, isAdmin: userData.isAdmin || false, class: userData.class || null, nickname: userData.nickname || null };
+                             // If class is missing, the updateUIBasedOnAuthState will handle showing the modal
+                         } else {
+                             console.log("User not in 'users', checking 'pendingUsers' for email:", user.email.toLowerCase());
+                             const pendingUserDocRef = firestore.collection('pendingUsers').doc(user.email.toLowerCase());
+                             const pendingDoc = await pendingUserDocRef.get();
+                             if (pendingDoc.exists) {
+                                 console.log("User found in 'pendingUsers'. Data:", pendingDoc.data());
+                                 const pendingData = pendingDoc.data();
+                                 resolvedUser = { uid: user.uid, displayName: user.displayName, email: user.email, isAdmin: pendingData.isAdmin || false, class: null, nickname: pendingData.nickname || null }; // Class is null initially
+                                 const batch = firestore.batch();
+                                 // Migrate from pending to users
+                                 batch.set(userDocRef, { email: user.email.toLowerCase(), isAdmin: resolvedUser.isAdmin, nickname: resolvedUser.nickname, class: null, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); // Add createdAt timestamp
+                                 batch.delete(pendingUserDocRef);
+                                 console.log("Attempting to commit batch: add to 'users', delete from 'pendingUsers'");
+                                 await batch.commit();
+                                 console.log("User successfully migrated from pending to users.");
+                                 // The updateUIBasedOnAuthState will detect the missing class and show the modal
+                             } else {
+                                 console.warn("User not found in 'pendingUsers' either. Access denied:", user.email);
+                                 showCustomAlert(`Hozzáférés megtagadva ehhez az email címhez: ${user.email}. Kérj meghívót egy adminisztrátortól.`, "Hiba");
+                                 await auth.signOut().catch(e => console.error("Sign out failed:", e));
+                                 resolvedUser = null;
+                             }
+                         }
+                     } catch (error) {
+                         console.error("Error checking user authorization:", error);
+                         if (error.code) { console.error("Firebase Error Code:", error.code); }
+                         showError(`Hiba történt a felhasználói jogosultság ellenőrzésekor: ${error.message}`);
+                         if (error.code !== 'auth/user-signed-out') {
+                             await auth.signOut().catch(e => console.error("Sign out failed after auth check error:", e));
+                         }
+                         resolvedUser = null;
+                     }
+                 }
+             } else {
+                  console.log("User signed out.");
+                  resolvedUser = null;
+              }
+
+             // Update UI and resolve the promise
+             updateUIBasedOnAuthState(resolvedUser).then(resolve); // Resolve promise AFTER UI update
+             unsubscribe(); // Unsubscribe after the first state change
+         });
+     });
+     // Initial check in case auth state is already determined before listener is attached
+     if (auth.currentUser !== null) {
+         // If already signed in, manually trigger the auth state check logic
+          console.log("Auth state already determined on listener setup. Manually triggering check.");
+          auth.onAuthStateChanged(() => {}, (error) => console.error("Manual auth check error:", error))(); // Call the listener function immediately
+     } else if (auth.currentUser === null) {
+         // If already signed out, manually trigger the auth state check logic
+          console.log("Auth state already determined (signed out) on listener setup. Manually triggering check.");
+          auth.onAuthStateChanged(() => {}, (error) => console.error("Manual auth check error:", error))(); // Call the listener function immediately
+     }
+ }
+
+
+ // --- Első Bejelentkezés - Osztály Bekérő Modal ---
+ function showClassInputModal() {
+     if (!currentUser || currentUser.class) return; // Only show if logged in and class is missing
+     console.log("Showing class input modal.");
+     classInputModal.classList.add('active');
+     userClassInput.value = ''; // Clear input field
+     userClassInput.focus(); // Focus the input
+
+     // Prevent closing by clicking outside
+     classInputModal.removeEventListener('click', handleClassInputModalClickOutside); // Remove previous listener
+     classInputModal.addEventListener('click', handleClassInputModalClickOutside);
+
+     // Handle form submission
+     firstLoginClassForm.removeEventListener('submit', handleFirstLoginClassFormSubmit); // Remove previous listener
+     firstLoginClassForm.addEventListener('submit', handleFirstLoginClassFormSubmit);
+ }
+
+ function hideClassInputModal() {
+     classInputModal.classList.remove('active');
+     classInputModal.removeEventListener('click', handleClassInputModalClickOutside);
+     firstLoginClassForm.removeEventListener('submit', handleFirstLoginClassFormSubmit);
+ }
+
+ function handleClassInputModalClickOutside(event) {
+     // If clicked directly on the overlay (not the modal content)
+     if (event.target === classInputModal) {
+         // Prevent closing, force user to enter class
+         showCustomAlert("Kérlek add meg az osztályodat a folytatáshoz.", "Figyelem");
+     }
+ }
+
+ async function handleFirstLoginClassFormSubmit(event) {
+     event.preventDefault();
+     if (!currentUser || currentUser.class || !firestore) return;
+
+     const userClass = userClassInput.value.trim();
+     if (!userClass) {
+         showCustomAlert("Kérlek add meg az osztályodat.", "Hiányzó adat");
+         return;
+     }
+
+     setActionLoading(true, 'Osztály mentése...');
+     try {
+         const userDocRef = firestore.collection('users').doc(currentUser.uid);
+         await userDocRef.update({ class: userClass });
+         currentUser.class = userClass; // Update local state
+         hideClassInputModal();
+         showCustomAlert(`Osztályod (${userClass}) sikeresen mentve!`, "Siker");
+         console.log("User class saved:", userClass);
+         // Now that class is saved, proceed with normal routing
+         handleRouteChange();
+
+     } catch (error) {
+         console.error("Error saving user class:", error);
+         showCustomAlert(`Hiba történt az osztály mentésekor: ${error.message}`, "Hiba");
+     } finally {
+         setActionLoading(false);
+     }
+ }
+
+
+// --- Firestore Listeners ---
+function setupFirestoreListeners() {
+     if (!firestore) { console.log("Skipping Firestore listeners: no firestore."); return; }
+     if (unsubscribeListeners.length > 0) { console.log("Firestore listeners already running."); return; }
+
+    console.log("Setting up Firestore listeners...");
+    unsubscribeListeners = [];
+    initialDataLoaded = false;
+    let listenersPending = 4; // classes, users, pendingUsers, announcement
+
+    function checkInitialLoadComplete() {
+        listenersPending--;
+        console.log(`Listener responded. Pending: ${listenersPending}`);
+        if (listenersPending <= 0 && !initialDataLoaded) {
+            console.log("All initial Firestore data loaded or errored.");
+            initialDataLoaded = true;
+            loadingView.classList.add('hidden');
+            // Wait for auth state to be resolved before routing after initial data load
+             authStatePromise.then(() => {
+                 console.log("Auth state resolved after initial data load. Handling route change.");
+                 handleRouteChange();
+             });
+        }
+    }
+
+    try {
+         // Classes data listener
+         const classesRef = firestore.collection('classes').orderBy('date').orderBy('time');
+         const unsubClasses = classesRef.onSnapshot((snapshot) => {
+             classesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+             console.log("Classes data updated:", classesData.length, "classes");
+             checkInitialLoadComplete();
+             // Re-render relevant views if data updates after initial load
+             if (initialDataLoaded) {
+                 console.log("Classes data updated, re-rendering relevant views.");
+                 if (currentView === 'public-classes') renderPublicClassesView();
+                 if (currentView === 'user-registration') renderUserRegistrationView();
+                 if (currentView === 'admin-classes') renderAdminClassesView();
+                 // Admin users view doesn't depend on classes data directly
+             }
+         }, (error) => {
+             console.error("Error fetching classes:", error);
+             showError("Hiba az óra adatok betöltésekor.");
+             checkInitialLoadComplete();
+         });
+         unsubscribeListeners.push(unsubClasses);
+
+         // Users data listener (only needed for admin view, but listen always if logged in)
+         const usersRef = firestore.collection('users').orderBy('email');
+         const unsubUsers = usersRef.onSnapshot((snapshot) => {
+             allowedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+             console.log("Allowed users updated:", allowedUsers.length);
+             checkInitialLoadComplete();
+             // Re-render relevant views if data updates after initial load
+             if (initialDataLoaded) {
+                 console.log("Allowed users updated, re-rendering relevant views.");
+                  // Update currentUser's isAdmin status if it changed in Firestore
+                 if (currentUser) {
+                      const updatedCurrentUser = allowedUsers.find(u => u.id === currentUser.uid);
+                      if (updatedCurrentUser && updatedCurrentUser.isAdmin !== currentUser.isAdmin) {
+                           console.log("Current user's admin status changed in Firestore.");
+                           currentUser.isAdmin = updatedCurrentUser.isAdmin;
+                           updateUIBasedOnAuthState(currentUser); // Re-trigger UI update based on new admin status
+                      }
+                 }
+                 if (currentView === 'admin-users') renderAdminUsersView();
+             }
+         }, (error) => { console.error("Error fetching allowed users:", error); checkInitialLoadComplete(); });
+         unsubscribeListeners.push(unsubUsers);
+
+         // Pending users data listener (only needed for admin view)
+         const pendingUsersRef = firestore.collection('pendingUsers').orderBy('id'); // Order by email (document ID)
+         const unsubPendingUsers = pendingUsersRef.onSnapshot((snapshot) => {
+             pendingUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); // ID is the email
+             console.log("Pending users updated:", pendingUsers.length);
+             checkInitialLoadComplete();
+              // Re-render relevant views if data updates after initial load
+              if (initialDataLoaded && currentView === 'admin-users') {
+                  console.log("Pending users updated, re-rendering admin users view.");
+                  renderAdminUsersView();
+              }
+         }, (error) => { console.error("Error fetching pending users:", error); checkInitialLoadComplete(); });
+         unsubscribeListeners.push(unsubPendingUsers);
+
+         // Announcement listener
+         const announcementRef = firestore.collection('config').doc('announcement');
+         const unsubAnnouncement = announcementRef.onSnapshot((doc) => {
+             announcement = doc.exists ? (doc.data().message || "") : "";
+             console.log("Announcement updated:", announcement);
+             checkInitialLoadComplete();
+             if (initialDataLoaded) displayAnnouncement(); // Display announcement if initial load is complete
+         }, (error) => {
+             console.error("Error fetching announcement:", error);
+             announcement = ""; // Clear announcement on error
+             checkInitialLoadComplete();
+              if (initialDataLoaded) displayAnnouncement();
+         });
+         unsubscribeListeners.push(unsubAnnouncement);
+
+
+    } catch (error) {
+         console.error("Error setting up Firestore listeners:", error);
+         showError("Hiba az adatbázis figyelőinek beállításakor.");
+         listenersPending = 0; // Ensure initial load check completes even on error
+         checkInitialLoadComplete();
+     }
+}
+
+function unsubscribeFirestoreListeners() {
+     console.log(`Unsubscribing ${unsubscribeListeners.length} Firestore listeners.`);
+     unsubscribeListeners.forEach(unsub => unsub());
+     unsubscribeListeners = [];
+ }
+
+
+// --- Renderelő Függvények ---
+function renderView() {
+    console.log(`Attempting to render view: ${currentView}`);
+    if (!initialDataLoaded && !['loading', 'error'].includes(currentView)) {
+        console.log("Render skipped: initial data not loaded yet.");
+        const viewElement = document.getElementById(`${currentView}-view`);
+        viewElement?.classList.add('view-loading');
+        return;
+    }
+
+    if (!['loading', 'error'].includes(currentView)) {
+        loadingView.classList.add('hidden');
+        errorView.classList.add('hidden');
+    } else { return; } // Don't render other views if loading or error
+
+    const viewElement = document.getElementById(`${currentView}-view`);
+     if (!viewElement) {
+         console.error(`Render failed: View element ${currentView}-view not found.`);
+         return;
+     }
+     viewElement.classList.remove('view-loading'); // Remove loading indicator once rendering starts
+
+    try {
+        switch (currentView) {
+            case 'public-classes': renderPublicClassesView(); break;
+            case 'user-registration': renderUserRegistrationView(); break;
+            case 'admin-classes': renderAdminClassesView(); break;
+            case 'admin-users': renderAdminUsersView(); break;
+            default: navigateTo('#/'); // Redirect to home if view is unrecognized
+        }
+    } catch (error) {
+        console.error(`Error rendering view ${currentView}:`, error);
+        showError(`Hiba történt a(z) ${currentView} nézet megjelenítésekor: ${error.message}`);
+    } finally {
+        // Ensure action overlay is hidden after rendering, unless explicitly shown by an action
+         setActionLoading(false);
+    }
+}
+
+/** Publikus óra lista nézet renderelése */
+function renderPublicClassesView() {
+    console.log("Rendering Public Classes View...");
+    const container = publicClassesViewDiv.querySelector('.w-full.max-w-4xl');
+    if (!container) return;
+
+    const upcomingClasses = classesData.filter(cls => {
+        const classDateTime = new Date(`${cls.date} ${cls.time ? cls.time.split('-')[0].trim() : '00:00'}`);
+        return classDateTime >= new Date(); // Show only upcoming classes
+    });
+
+    if (upcomingClasses.length === 0) {
+        container.innerHTML = `
+            <div class="large-message">
+                <span class="emoji">🎉</span>
+                Nincsenek jelenleg meghirdetett emelt órák.
+            </div>
+        `;
+    } else {
+        let tableHTML = `
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Dátum</th>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Időpont</th>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Óra Neve</th>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Tanár</th>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Létszám</th>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Leírás</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200 text-gray-700 text-sm">
+                    ${upcomingClasses.map(cls => {
+                        const registeredCount = cls.registrations ? Object.keys(cls.registrations).length : 0;
+                        return `
+                            <tr>
+                                <td class="px-3 py-2 whitespace-nowrap text-center">${escapeHtml(cls.date)}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-center">${escapeHtml(cls.time || '-')}</td>
+                                <td class="px-3 py-2">${escapeHtml(cls.name)}</td>
+                                <td class="px-3 py-2 whitespace-nowrap">${escapeHtml(cls.teacher || '-')}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-center">${registeredCount} / ${cls.capacity || '∞'}</td>
+                                <td class="px-3 py-2">${escapeHtml(cls.description || '-')}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+        container.innerHTML = tableHTML;
+    }
+}
+
+/** Felhasználói foglalási nézet renderelése */
+function renderUserRegistrationView() {
+    console.log("Rendering User Registration View...");
+    const container = userRegistrationViewDiv.querySelector('.w-full.max-w-4xl');
+     if (!container || !currentUser || !currentUser.class) {
+         // If user is not logged in or class is missing, redirect to public view or show class input modal
+         if (!currentUser) navigateTo('#/');
+         else if (!currentUser.class) showClassInputModal();
+         return;
+     }
+
+     userClassInfoSpan.textContent = `Osztályod: ${escapeHtml(currentUser.class)}`;
+
+    const upcomingClasses = classesData.filter(cls => {
+        const classDateTime = new Date(`${cls.date} ${cls.time ? cls.time.split('-')[0].trim() : '00:00'}`);
+        return classDateTime >= new Date(); // Show only upcoming classes
+    });
+
+    if (upcomingClasses.length === 0) {
+        container.innerHTML = `
+            <div class="large-message">
+                <span class="emoji">🎉</span>
+                Nincsenek jelenleg meghirdetett emelt órák, amelyekre jelentkezhetsz.
+            </div>
+        `;
+    } else {
+        let tableHTML = `
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Dátum</th>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Időpont</th>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Óra Neve</th>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Tanár</th>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Létszám</th>
+                         <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Leírás</th>
+                        <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Művelet</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200 text-gray-700 text-sm">
+                    ${upcomingClasses.map(cls => {
+                        const registeredCount = cls.registrations ? Object.keys(cls.registrations).length : 0;
+                        const isRegistered = cls.registrations && cls.registrations[currentUser.uid];
+                        const isFull = cls.capacity && registeredCount >= cls.capacity;
+
+                        return `
+                            <tr>
+                                <td class="px-3 py-2 whitespace-nowrap text-center">${escapeHtml(cls.date)}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-center">${escapeHtml(cls.time || '-')}</td>
+                                <td class="px-3 py-2">${escapeHtml(cls.name)}</td>
+                                <td class="px-3 py-2 whitespace-nowrap">${escapeHtml(cls.teacher || '-')}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-center">${registeredCount} / ${cls.capacity || '∞'}</td>
+                                <td class="px-3 py-2">${escapeHtml(cls.description || '-')}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-center">
+                                    ${isRegistered ?
+                                        `<button data-id="${cls.id}" data-action="cancel" class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-150 text-xs">Visszavonás</button>`
+                                        : isFull ?
+                                        `<span class="text-yellow-600 font-semibold text-xs">Betelt</span>`
+                                        :
+                                        `<button data-id="${cls.id}" data-action="register" class="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150 text-xs">Jelentkezés</button>`
+                                    }
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+        container.innerHTML = tableHTML;
+    }
+}
+
+/** Admin óra kezelés nézet renderelése */
+function renderAdminClassesView() {
+    console.log("Rendering Admin Classes View...");
+    const classListDiv = document.getElementById('admin-class-list');
+     if (!classListDiv || !currentUser?.isAdmin) {
+         // Should not happen if routing is correct, but as a safeguard
+         navigateTo('#/');
+         return;
+     }
+
+    if (classesData.length === 0) {
+        classListDiv.innerHTML = `
+            <div class="large-message text-base">
+                <span class="emoji">🤷‍♀️</span>
+                Nincsenek még meghirdetett emelt órák. Kezdd az "Új Óra Hozzáadása" gombbal!
+            </div>
+        `;
+    } else {
+        let tableHTML = `
+            <div class="overflow-x-auto shadow-md rounded-lg border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Dátum</th>
+                            <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Időpont</th>
+                            <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Óra Neve</th>
+                            <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Tanár</th>
+                            <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Létszám</th>
+                            <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Jelentkezők</th>
+                            <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200 text-gray-700 text-sm">
+                        ${classesData.map(cls => {
+                            const registeredCount = cls.registrations ? Object.keys(cls.registrations).length : 0;
+                            return `
+                                <tr data-id="${cls.id}">
+                                    <td class="px-3 py-2 whitespace-nowrap text-center">${escapeHtml(cls.date)}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-center">${escapeHtml(cls.time || '-')}</td>
+                                    <td class="px-3 py-2">${escapeHtml(cls.name)}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap">${escapeHtml(cls.teacher || '-')}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-center">${registeredCount} / ${cls.capacity || '∞'}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-center">
+                                        ${registeredCount > 0 ?
+                                            `<button data-id="${cls.id}" data-action="view-registrations" class="px-3 py-1 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition duration-150 text-xs">Megtekintés (${registeredCount})</button>`
+                                            : `-`
+                                        }
+                                    </td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-center space-x-2">
+                                        <button data-id="${cls.id}" data-action="edit-class" class="px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-150 text-xs">Szerkeszt</button>
+                                        <button data-id="${cls.id}" data-action="delete-class" class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-150 text-xs">Töröl</button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        classListDiv.innerHTML = tableHTML;
+    }
+}
+
+/** Admin felhasználó kezelés nézet renderelése */
+function renderAdminUsersView() {
+     console.log("Rendering Admin Users View...");
+     const allowedUsersList = document.getElementById('admin-allowed-users-list');
+     const pendingUsersList = document.getElementById('admin-pending-users-list');
+     const adminAnnouncementTextarea = document.getElementById('admin-announcement');
+
+     if (!allowedUsersList || !pendingUsersList || !adminAnnouncementTextarea || !currentUser?.isAdmin) {
+         // Should not happen if routing is correct, but as a safeguard
+         navigateTo('#/');
+         return;
+     }
+
+     // Render Allowed Users
+     if (allowedUsers.length === 0) {
+         allowedUsersList.innerHTML = '<li class="text-gray-500 italic">Nincsenek engedélyezett felhasználók.</li>';
+     } else {
+         allowedUsersList.innerHTML = allowedUsers.map(user => `
+             <li data-id="${user.id}" class="flex flex-wrap justify-between items-center p-2 border-b last:border-b-0 gap-2">
+                 <div class="flex-grow">
+                     <span class="text-sm font-medium">${escapeHtml(user.nickname || user.email || 'N/A')}</span>
+                     ${user.nickname ? `<span class="text-xs text-gray-500 block break-all">(${escapeHtml(user.email || 'N/A')})</span>` : ''}
+                      ${user.class ? `<span class="text-xs text-gray-500 block">Osztály: ${escapeHtml(user.class)}</span>` : ''}
+                     <span class="text-xs text-gray-500 block break-all">UID: ${user.id}</span>
+                 </div>
+                 <div class="flex space-x-2 flex-shrink-0 items-center">
+                     ${user.isAdmin ? '<span class="font-bold text-purple-700 text-xs mr-2">(Admin)</span>' : ''}
+                     <button data-id="${user.id}" data-action="edit-user" class="admin-action-button text-xs px-2 py-1 rounded bg-gray-500 hover:bg-gray-600 text-white">Név/Osztály Szerk.</button>
+                     <button data-id="${user.id}" data-action="toggle-admin" class="admin-action-button text-xs px-2 py-1 rounded ${user.isAdmin ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white ${user.id === currentUser.uid ? 'opacity-50 cursor-not-allowed' : ''}" ${user.id === currentUser.uid ? 'disabled' : ''}>${user.isAdmin ? 'Admin Elvétel' : 'Admin Adás'}</button>
+                     <button data-id="${user.id}" data-action="delete-user" class="admin-action-button text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 ${user.id === currentUser.uid ? 'opacity-50 cursor-not-allowed' : ''}" ${user.id === currentUser.uid ? 'disabled' : ''}>Eltávolít</button>
+                 </div>
+             </li>
+         `).join('');
+     }
+
+     // Render Pending Users
+     if (pendingUsers.length === 0) {
+         pendingUsersList.innerHTML = '<li class="text-gray-500 italic">Nincsenek meghívott felhasználók.</li>';
+     } else {
+         pendingUsersList.innerHTML = pendingUsers.map(pending => `
+             <li data-email="${escapeHtml(pending.id)}" class="flex flex-wrap justify-between items-center p-2 border-b last:border-b-0 gap-2">
+                 <div class="flex-grow">
+                     <span class="text-sm font-medium">${escapeHtml(pending.nickname || pending.id)}</span>
+                     ${pending.nickname ? `<span class="text-xs text-gray-500 block">(${escapeHtml(pending.id)})</span>` : ''}
+                 </div>
+                 <div class="flex space-x-2 flex-shrink-0 items-center">
+                     ${pending.isAdmin ? '<span class="font-bold text-purple-700 text-xs mr-2">(Adminnak meghívva)</span>' : '<span class="text-xs text-gray-500 mr-2">(Felhasználónak meghívva)</span>'}
+                     <button data-email="${escapeHtml(pending.id)}" data-action="edit-pending" class="admin-action-button text-xs px-2 py-1 rounded bg-gray-500 hover:bg-gray-600 text-white">Szerkeszt</button>
+                     <button data-email="${escapeHtml(pending.id)}" data-action="delete-pending" class="admin-action-button text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50">Meghívás Törlése</button>
+                 </div>
+             </li>
+         `).join('');
+     }
+
+     // Set announcement textarea value
+     adminAnnouncementTextarea.value = escapeHtml(announcement);
+}
+
+
+// --- Firestore Adat Műveletek ---
+
+// Class CRUD
+async function saveClass(classId = null, classData) {
+     if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod az órák mentéséhez.", "Hiba");
+     setActionLoading(true, 'Óra mentése...');
+     try {
+         const classesRef = firestore.collection('classes');
+         if (classId) {
+             // Update existing class
+             await classesRef.doc(classId).update({
+                 name: classData.name,
+                 teacher: classData.teacher,
+                 date: classData.date,
+                 time: classData.time,
+                 capacity: classData.capacity,
+                 description: classData.description,
+                 updatedAt: firebase.firestore.FieldValue.serverTimestamp() // Add update timestamp
+             });
+             console.log("Class updated:", classId);
+             showCustomAlert("Óra sikeresen frissítve.");
+         } else {
+             // Add new class
+             await classesRef.add({
+                 name: classData.name,
+                 teacher: classData.teacher,
+                 date: classData.date,
+                 time: classData.time,
+                 capacity: classData.capacity,
+                 description: classData.description,
+                 registrations: {}, // Initialize with empty registrations map
+                 createdAt: firebase.firestore.FieldValue.serverTimestamp(), // Add creation timestamp
+                 updatedAt: firebase.firestore.FieldValue.serverTimestamp() // Add update timestamp
+             });
+             console.log("New class added.");
+             showCustomAlert("Új óra sikeresen hozzáadva.");
+         }
+         hideClassModal(); // Close modal on success
+     } catch (error) {
+         console.error("Error saving class:", error);
+         showCustomAlert(`Hiba az óra mentésekor: ${error.message}`, "Hiba");
+     } finally {
+         setActionLoading(false);
+     }
+ }
+
+ async function deleteClass(classId) {
+     if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod az órák törléséhez.", "Hiba");
+     const confirmed = await showCustomConfirm("Biztosan törlöd ezt az órát? Ez a jelentkezéseket is törli!", "Megerősítés");
+     if (!confirmed) return;
+
+     setActionLoading(true, 'Óra törlése...');
+     try {
+         await firestore.collection('classes').doc(classId).delete();
+         console.log("Class deleted:", classId);
+         showCustomAlert("Óra sikeresen törölve.");
+     } catch (error) {
+         console.error("Error deleting class:", error);
+         showCustomAlert(`Hiba az óra törlésekor: ${error.message}`, "Hiba");
+     } finally {
+         setActionLoading(false);
+     }
+ }
+
+ // User Registration/Cancellation
+ async function registerForClass(classId) {
+      if (!currentUser || !currentUser.class || !firestore) {
+           showCustomAlert("Jelentkezéshez be kell jelentkezned és meg kell adnod az osztályodat.", "Figyelem");
+           return;
+       }
+
+      setActionLoading(true, 'Jelentkezés...');
+      try {
+          const classRef = firestore.collection('classes').doc(classId);
+          await firestore.runTransaction(async (transaction) => {
+              const classDoc = await transaction.get(classRef);
+              if (!classDoc.exists) {
+                  throw "Az óra nem található.";
+              }
+
+              const classData = classDoc.data();
+              const registrations = classData.registrations || {};
+              const capacity = classData.capacity;
+              const registeredCount = Object.keys(registrations).length;
+
+              if (registrations[currentUser.uid]) {
+                  throw "Már jelentkeztél erre az órára.";
+              }
+              if (capacity && registeredCount >= capacity) {
+                  throw "Az óra betelt.";
+              }
+
+              // Add user to registrations
+              registrations[currentUser.uid] = {
+                  name: currentUser.nickname || currentUser.displayName || currentUser.email,
+                  class: currentUser.class,
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp()
+              };
+
+              transaction.update(classRef, { registrations: registrations });
+          });
+          console.log("Successfully registered for class:", classId);
+          showCustomAlert("Sikeresen jelentkeztél az órára!");
+
+      } catch (error) {
+          console.error("Error registering for class:", error);
+          showCustomAlert(`Hiba a jelentkezés során: ${typeof error === 'string' ? error : error.message}`, "Hiba");
+      } finally {
+          setActionLoading(false);
+      }
+ }
+
+ async function cancelRegistration(classId) {
+      if (!currentUser || !firestore) {
+           showCustomAlert("Jelentkezés visszavonásához be kell jelentkezned.", "Figyelem");
+           return;
+       }
+
+      const confirmed = await showCustomConfirm("Biztosan visszavonod a jelentkezésedet erről az óráról?", "Megerősítés");
+      if (!confirmed) return;
+
+      setActionLoading(true, 'Jelentkezés visszavonása...');
+      try {
+          const classRef = firestore.collection('classes').doc(classId);
+          await firestore.runTransaction(async (transaction) => {
+              const classDoc = await transaction.get(classRef);
+              if (!classDoc.exists) {
+                  throw "Az óra nem található.";
+              }
+
+              const classData = classDoc.data();
+              const registrations = classData.registrations || {};
+
+              if (!registrations[currentUser.uid]) {
+                  throw "Nem jelentkeztél erre az órára.";
+              }
+
+              // Remove user from registrations
+              delete registrations[currentUser.uid];
+
+              transaction.update(classRef, { registrations: registrations });
+          });
+          console.log("Successfully cancelled registration for class:", classId);
+          showCustomAlert("Jelentkezés sikeresen visszavonva.");
+
+      } catch (error) {
+          console.error("Error cancelling registration:", error);
+          showCustomAlert(`Hiba a visszavonás során: ${typeof error === 'string' ? error : error.message}`, "Hiba");
+      } finally {
+          setActionLoading(false);
+      }
+ }
+
+ // Admin User Management Actions (Delegated from renderAdminUsersView)
+ async function addPendingUser(email, nickname, isAdmin) {
+     if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod az admin műveletekhez.", "Hiba");
+     if (!email || !email.includes('@szag.hu')) return showCustomAlert('Adj meg egy érvényes "@szag.hu" email címet!');
+
+     setActionLoading(true, 'Felhasználó meghívása...');
+     try {
+         const pendingDocRef = firestore.collection('pendingUsers').doc(email.toLowerCase());
+         const pendingDocSnap = await pendingDocRef.get();
+         let confirmed = true;
+          if (pendingDocSnap.exists) {
+              confirmed = await showCustomConfirm(`"${email}" már meg van hívva. Frissíted a jogosultságát és a nevét?`, "Megerősítés");
+          }
+          if (!confirmed) { setActionLoading(false); return; }
+
+          // Check if user already exists in allowedUsers
+          const allowedQuery = firestore.collection('users').where('email', '==', email.toLowerCase());
+          const allowedSnap = await allowedQuery.get();
+          if (!allowedSnap.empty) {
+              showCustomAlert(`"${email}" már szerepel az engedélyezett felhasználók között.`);
+              setActionLoading(false);
+              return;
+          }
+
+
+         await pendingDocRef.set({ isAdmin: isAdmin, nickname: nickname.trim() || null });
+         showCustomAlert(`"${email}" sikeresen meghívva.`);
+
+         // Clear input fields
+         const emailInput = document.getElementById('newPendingUserEmail');
+         const nicknameInput = document.getElementById('newPendingUserNickname');
+         const isAdminCheckbox = document.getElementById('newPendingUserIsAdmin');
+         if (emailInput) emailInput.value = '';
+         if (nicknameInput) nicknameInput.value = '';
+         if (isAdminCheckbox) isAdminCheckbox.checked = false;
+
+     }
+     catch (error) { showCustomAlert(`Hiba a meghíváskor: ${error.message}`, "Hiba"); } finally { setActionLoading(false); }
+ }
+
+ async function deleteAllowedUser(userId, userEmail) {
+      if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+     if (userId === currentUser.uid) return showCustomAlert('Magadat nem távolíthatod el.');
+      const confirmed = await showCustomConfirm(`Biztosan eltávolítod az engedélyezettek közül: "${userEmail || userId}"?`, "Megerősítés");
+      if (!confirmed) return;
+      setActionLoading(true, 'Felhasználó törlése...');
+      try { await firestore.collection('users').doc(userId).delete(); showCustomAlert(`"${userEmail || userId}" eltávolítva az engedélyezettek listájáról.`); }
+      catch (error) { showCustomAlert(`Hiba: ${error.message}`, "Hiba"); } finally { setActionLoading(false); }
+  }
+
+ async function deletePendingUser(email) {
+      if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+      const confirmed = await showCustomConfirm(`Biztosan törlöd a meghívót: "${email}"?`, "Megerősítés");
+      if (!confirmed) return;
+      setActionLoading(true, 'Meghívó törlése...');
+      try { await firestore.collection('pendingUsers').doc(email).delete(); showCustomAlert(`"${email}" meghívója törölve.`); }
+      catch (error) { showCustomAlert(`Hiba: ${error.message}`, "Hiba"); } finally { setActionLoading(false); }
+  }
+
+ async function toggleAdminStatus(userId, userEmail, currentIsAdmin) {
+      if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+     if (userId === currentUser.uid) return showCustomAlert('Saját admin státuszodat nem módosíthatod.');
+      setActionLoading(true, 'Admin státusz módosítása...');
+      try { await firestore.collection('users').doc(userId).update({ isAdmin: !currentIsAdmin }); showCustomAlert(`"${userEmail || userId}" admin státusza módosítva.`); }
+      catch (error) { showCustomAlert(`Hiba: ${error.message}`, "Hiba"); } finally { setActionLoading(false); }
+  }
+
+ async function editUser(userId, currentEmail, currentNickname, currentClass) {
+      if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+
+      const newNickname = prompt(`Add meg "${currentEmail}" új megjelenítendő nevét (üresen hagyva törli):`, currentNickname || '');
+      if (newNickname === null) return; // User cancelled
+
+      const newClass = prompt(`Add meg "${currentEmail}" új osztályát (üresen hagyva törli):`, currentClass || '');
+       if (newClass === null) return; // User cancelled
+
+      setActionLoading(true, 'Felhasználó adatainak frissítése...');
+      try {
+          await firestore.collection('users').doc(userId).update({
+              nickname: newNickname.trim() || null,
+              class: newClass.trim() || null
+          });
+          showCustomAlert(`"${currentEmail}" adatai frissítve.`);
+      }
+      catch (error) { showCustomAlert(`Hiba az adatok frissítésekor: ${error.message}`, "Hiba"); } finally { setActionLoading(false); }
+  }
+
+ async function editPendingUser(email, currentNickname, currentIsAdmin) {
+      if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+
+      const newNickname = prompt(`Add meg "${email}" új megjelenítendő nevét (üresen hagyva törli):`, currentNickname || '');
+      if (newNickname === null) return; // User cancelled
+
+      const confirmed = await showCustomConfirm(`Legyen "${email}" adminisztrátor? (Jelenlegi: ${currentIsAdmin ? 'Igen' : 'Nem'})`, "Jogosultság");
+      const newIsAdmin = confirmed;
+
+      setActionLoading(true, 'Meghívott adatainak frissítése...');
+      try {
+          await firestore.collection('pendingUsers').doc(email).update({
+              nickname: newNickname.trim() || null,
+              isAdmin: newIsAdmin
+          });
+          showCustomAlert(`"${email}" meghívott adatai frissítve.`);
+      }
+      catch (error) { showCustomAlert(`Hiba a meghívott adatainak frissítésekor: ${error.message}`, "Hiba"); } finally { setActionLoading(false); }
+  }
+
+
+ async function saveAnnouncement() {
+      if (!currentUser?.isAdmin || !firestore) return showCustomAlert("Nincs jogosultságod.", "Hiba");
+      const message = document.getElementById('admin-announcement').value.trim();
+      setActionLoading(true, 'Hirdetmény mentése...');
+      try {
+         await firestore.collection('config').doc('announcement').set({ message: message || null }); // Use null for empty string
+         showCustomAlert("Hirdetmény mentve.");
+         // The listener will update the global announcement variable and display it
+      } catch (error) { showCustomAlert(`Hiba a hirdetmény mentésekor: ${error.message}`, "Hiba"); }
+      finally { setActionLoading(false); }
+  }
+
+
+ // --- Jelentkezők Listázása Modal ---
+ function showRegistrationsModal(classId) {
+      const classInfo = classesData.find(cls => cls.id === classId);
+      if (!classInfo) return showCustomAlert("Az óra adatai nem találhatók.", "Hiba");
+
+      const registrations = classInfo.registrations || {};
+      const registeredUsers = Object.entries(registrations).map(([uid, data]) => ({
+          uid: uid,
+          name: data.name || 'N/A',
+          class: data.class || 'N/A',
+          timestamp: data.timestamp ? data.timestamp.toDate() : null // Convert Firestore Timestamp to Date
+      })).sort((a, b) => (a.timestamp && b.timestamp) ? a.timestamp - b.timestamp : 0); // Sort by registration time
+
+      let modalContent = `
+          <h3 class="text-xl font-bold mb-4 text-indigo-700">Jelentkezők: ${escapeHtml(classInfo.name)} (${escapeHtml(classInfo.date)})</h3>
+          ${registeredUsers.length === 0 ?
+             `<p class="text-gray-700">Nincsenek jelentkezők erre az órára.</p>`
+             :
+             `
+             <div class="overflow-x-auto max-h-96">
+                 <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
+                     <thead>
+                         <tr>
+                             <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">Név</th>
+                             <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Osztály</th>
+                             <th class="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Jelentkezés ideje</th>
+                         </tr>
+                     </thead>
+                     <tbody class="bg-white divide-y divide-gray-200 text-gray-700 text-sm">
+                         ${registeredUsers.map(reg => `
+                             <tr>
+                                 <td class="px-3 py-2 whitespace-nowrap">${escapeHtml(reg.name)}</td>
+                                 <td class="px-3 py-2 whitespace-nowrap text-center">${escapeHtml(reg.class)}</td>
+                                 <td class="px-3 py-2 whitespace-nowrap text-center">${reg.timestamp ? reg.timestamp.toLocaleString('hu-HU') : '-'}</td>
+                             </tr>
+                         `).join('')}
+                     </tbody>
+                 </table>
+             </div>
+             `
+          }
+      `;
+
+      showCustomDialog(modalContent, 'alert'); // Use alert type as it only needs an OK button
+      // Replace the OK button with a Close button for clarity
+      const okButton = customDialogButtons.querySelector('button');
+      if (okButton) {
+          okButton.textContent = 'Bezárás';
+          okButton.className = 'px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-150';
+      }
+ }
+
+
+// --- Eseményfigyelők ---
+function setupEventListeners() {
+    console.log("Setting up event listeners...");
+    window.addEventListener('hashchange', handleRouteChange);
+
+    // Login popup buttons are handled in updateUIBasedOnAuthState and showLoginPopup
+    loginPopupCloseButton.addEventListener('click', () => loginPopup.classList.add('hidden'));
+
+    // Delegated event listener for user registration view actions (register/cancel)
+    userRegistrationViewDiv.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-action]');
+        if (!button || !currentUser || !currentUser.class) return; // Only handle if logged in and class is set
+
+        const classId = button.dataset.id;
+        const action = button.dataset.action;
+
+        if (action === 'register') {
+            registerForClass(classId);
+        } else if (action === 'cancel') {
+            cancelRegistration(classId);
+        }
+    });
+
+    // Delegated event listener for admin classes view actions (add/edit/delete/view registrations)
+    adminClassesViewDiv.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button || !currentUser?.isAdmin) return; // Only handle if admin
+
+        const classId = button.dataset.id;
+        const action = button.dataset.action;
+
+        if (action === 'add-class') {
+            showClassModal(); // Show modal for adding
+        } else if (action === 'edit-class' && classId) {
+            showClassModal(classId); // Show modal for editing
+        } else if (action === 'delete-class' && classId) {
+            deleteClass(classId);
+        } else if (action === 'view-registrations' && classId) {
+             showRegistrationsModal(classId);
+        }
+    });
+
+    // Delegated event listener for admin users view actions
+    adminUsersViewDiv.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button || !currentUser?.isAdmin) return; // Only handle if admin
+
+        const action = button.dataset.action;
+        const userId = button.dataset.id; // For allowed users
+        const email = button.dataset.email; // For pending users
+
+        if (action === 'add-pending') {
+            const emailInput = document.getElementById('newPendingUserEmail');
+            const nicknameInput = document.getElementById('newPendingUserNickname');
+            const isAdminCheckbox = document.getElementById('newPendingUserIsAdmin');
+             if (emailInput && nicknameInput && isAdminCheckbox) {
+                  addPendingUser(emailInput.value, nicknameInput.value, isAdminCheckbox.checked);
+             }
+        } else if (action === 'save-announcement') {
+            saveAnnouncement();
+        } else if (action === 'delete-user' && userId) {
+             const userEmail = allowedUsers.find(u => u.id === userId)?.email || userId;
+             deleteAllowedUser(userId, userEmail);
+        } else if (action === 'toggle-admin' && userId) {
+             const user = allowedUsers.find(u => u.id === userId);
+             if (user) toggleAdminStatus(userId, user.email, user.isAdmin);
+        } else if (action === 'delete-pending' && email) {
+             deletePendingUser(email);
+        } else if (action === 'edit-user' && userId) {
+             const user = allowedUsers.find(u => u.id === userId);
+             if (user) editUser(userId, user.email, user.nickname, user.class);
+        } else if (action === 'edit-pending' && email) {
+             const pending = pendingUsers.find(p => p.id === email);
+             if (pending) editPendingUser(email, pending.nickname, pending.isAdmin);
+        }
+    });
+
+
+    // Class Modal button listeners (Cancel and Save handled by form submit)
+     classModalCancelButton.addEventListener('click', hideClassModal);
+
+    // Class Form submit listener
+    classForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!currentUser?.isAdmin) return; // Double check admin status
+
+        const classId = classForm.dataset.classId || null; // Get class ID if editing
+
+        const classData = {
+            name: classNameInput.value.trim(),
+            teacher: classTeacherInput.value.trim(),
+            date: classDateInput.value,
+            time: classTimeInput.value.trim(),
+            capacity: parseInt(classCapacityInput.value, 10),
+            description: classDescriptionInput.value.trim() || null // Use null for empty description
+        };
+
+        // Basic validation
+        if (!classData.name || !classData.teacher || !classData.date || !classData.time || isNaN(classData.capacity) || classData.capacity <= 0) {
+            showCustomAlert("Kérlek töltsd ki az összes kötelező mezőt (Név, Tanár, Dátum, Időpont, Létszám) és adj meg érvényes létszámot.", "Hiányzó adatok");
+            return;
+        }
+
+        saveClass(classId, classData);
+    });
+
+
+    console.log("Base event listeners attached.");
+}
+
+
+// --- Class Modal Kezelése (Admin Óra Hozzáadás/Szerkesztés) ---
+function showClassModal(classId = null) {
+     if (!currentUser?.isAdmin) return; // Only admins can open this modal
+
+     // Reset form and title
+     classForm.reset();
+     classForm.dataset.classId = ''; // Clear classId from dataset
+     classModalTitle.textContent = 'Új Óra Hozzáadása';
+     classModalSaveButton.textContent = 'Hozzáadás';
+
+     if (classId) {
+         const classToEdit = classesData.find(cls => cls.id === classId);
+         if (classToEdit) {
+             classForm.dataset.classId = classId;
+             classModalTitle.textContent = 'Óra Szerkesztése';
+             classModalSaveButton.textContent = 'Mentés';
+
+             // Populate form with existing data
+             classNameInput.value = classToEdit.name || '';
+             classTeacherInput.value = classToEdit.teacher || '';
+             classDateInput.value = classToEdit.date || '';
+             classTimeInput.value = classToEdit.time || '';
+             classCapacityInput.value = classToEdit.capacity || '';
+             classDescriptionInput.value = classToEdit.description || '';
+         } else {
+             showCustomAlert("A szerkeszteni kívánt óra nem található.", "Hiba");
+             return;
+         }
+     }
+
+     classModal.classList.add('active');
+     // Focus the first input field
+     classNameInput.focus();
+ }
+
+ function hideClassModal() {
+     classModal.classList.remove('active');
+     classForm.reset();
+     classForm.dataset.classId = ''; // Clear classId
+ }
+
+
+// --- Óra és Napváltás Figyelő ---
+function startClockAndDayCheck() {
+    let lastKnownDate = formatDateYYYYMMDD(new Date());
+
+    if (dayCheckInterval) clearInterval(dayCheckInterval);
+     // Check every minute if midnight has passed
+     dayCheckInterval = setInterval(() => {
+         const currentDate = formatDateYYYYMMDD(new Date());
+         if (currentDate !== lastKnownDate) {
+             console.log("Midnight detected! Reloading data for new day.");
+             lastKnownDate = currentDate;
+             // Re-evaluate the route, which will trigger re-rendering of relevant views
+              if (initialDataLoaded && !['loading', 'error'].includes(currentView)) {
+                   handleRouteChange();
+               }
+         }
+     }, 60000); // Check every minute
+
+     // Update clock every second (if needed, currently not displayed in HTML)
+     // if (clockInterval) clearInterval(clockInterval);
+     // clockInterval = setInterval(updateClockDisplay, 1000);
+     // updateClockDisplay(); // Initial update
+}
+
+// Idő kijelző frissítése (currently not used in this HTML structure)
+// function updateClockDisplay() {
+//     const now = new Date();
+//     const hours = now.getHours().toString().padStart(2, '0');
+//     const minutes = now.getMinutes().toString().padStart(2, '0');
+//     const seconds = now.getSeconds().toString().padStart(2, '0');
+//     // If you add a clock element, update it here
+//     // const clockElement = document.getElementById('current-time');
+//     // if (clockElement) {
+//     //     clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+//     // }
+// }
+
+
+// --- Admin Üzenet Megjelenítése ---
+function displayAnnouncement() {
+     // Announcement is only displayed for admins
+     if (currentUser?.isAdmin && announcement) {
+         announcementMessageSpan.textContent = announcement;
+         announcementBar.classList.remove('hidden');
+     } else {
+         announcementBar.classList.add('hidden');
+     }
+ }
+
+
+// --- Alkalmazás Indítása ---
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+
+    </script>
+
+</body>
+</html>

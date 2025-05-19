@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -53,9 +54,8 @@
         }
         #public-embed-view table th,
         #public-embed-view table td {
-             /* Responsive padding and font size for embed view */
-             padding: clamp(0.1rem, 0.5vw, 0.5rem); /* Még kisebb padding */
-             font-size: clamp(0.6rem, 1.5vw, 0.9rem); /* Még dinamikusabb betűméret */
+             padding: 0.75rem 1rem; /* Adjusted padding */
+             font-size: 1rem; /* Fixed font size for Full HD */
              border: 1px solid #e5e7eb; /* gray-200 */
              text-align: center; /* Középre igazítás */
              font-weight: bold; /* Félkövér betűk */
@@ -209,12 +209,15 @@
            }
 
 
-        /* Embed nézet stílusok */
+/* Embed nézet stílusok */
+html, body { height: 100%; margin: 0; padding: 0;} /* Ensure html and body take full height */
         body.embed-view {
             padding-top: 0 !important;
             margin-top: 0 !important;
-            display: block !important;
-            overflow-y: auto !important;
+            display: flex; /* Use flexbox for layout */
+            flex-direction: column; /* Stack children vertically */
+            height: 100% !important; /* Ensure body takes full viewport height */
+            overflow: hidden !important; /* Hide body scrollbar, main-content will scroll */
         }
         body.embed-view #app-header,
         body.embed-view footer,
@@ -225,6 +228,8 @@
              padding-top: 0 !important;
              margin-top: 0 !important;
              padding-bottom: 0 !important;
+             flex-grow: 1; /* Allow main content to fill remaining height */
+             overflow-y: auto; /* Enable vertical scrolling within main content */
          }
          body.embed-view .container {
              max-width: none !important; /* Remove max-width for full width */
@@ -233,6 +238,9 @@
          }
           body.embed-view #public-embed-view {
               padding: 0 !important;
+               display: flex; /* Use flexbox for embed view content */
+               flex-direction: column;
+               flex-grow: 1; /* Allow embed view to grow */
           }
           body.embed-view #public-embed-view .flex-col {
               padding: 0 !important;
@@ -252,6 +260,7 @@
           }
           body.embed-view #public-embed-view .overflow-x-auto {
               overflow-x: auto; /* Keep horizontal scroll for table */
+              flex-grow: 1; /* Allow the table container to grow */
           }
 
 
@@ -264,44 +273,72 @@
             color: #4b5563; /* gray-700 */
             padding: 0 1rem; /* Kis oldalsó padding */
         }
-         .large-message .emoji {
-             display: block;
-             font-size: 8vmin; /* Nagy emoji méret viewport alapján */
-             margin-bottom: 2vh; /* Függőleges margó viewport alapján */
-         }
+/* Stílus az ikonnal ellátott nagy üzenetekhez (embed nézetben) */
+.large-message.large-message-icon {
+            display: flex; /* Use flexbox to align icon and text */
+            align-items: center; /* Vertically center items within the flex container */
+            justify-content: center; /* Horizontally center the content */
+            text-align: left; /* Align text to the left within its container */
+            width: 100%; /* Ensure it takes full width */
+            margin-top: 0; /* Remove top margin */
+            padding: 1rem; /* Add some padding */
+            flex-direction: row; /* Arrange icon and text in a row */
+            flex-grow: 1; /* Allow this div to grow and fill available vertical space */
+             /* Set min-height to 100% minus header height to ensure vertical centering */
+             /* You might need to adjust '4rem' if your header height is different */
+            min-height: calc(100% - 4rem); /* Adjust based on actual header height */
+        }
 
-         /* Embed fejléc stílus */
-         .embed-header {
+        .large-message.large-message-icon .message-icon {
+            font-size: 5rem; /* Increased icon size */
+            margin-right: 2rem; /* Increased space between icon and text */
+            flex-shrink: 0; /* Prevent icon from shrinking */
+            width: auto;
+            height: auto;
+        }
+
+        .large-message.large-message-icon p {
+             font-size: 2rem; /* Increased text size */
+             font-weight: bold;
+             color: #4b5563; /* gray-700 */
+             margin: 0; /* Remove default paragraph margin */
+             max-width: 80%; /* Limit text width to prevent it from pushing the icon too far */
+             text-align: left; /* Ensure text is left-aligned */
+             line-height: 1.4; /* Adjust line height for better readability */
+        }
+
+/* Embed fejléc stílus */
+.embed-header {
              background-color: #4f46e5; /* indigo-600 */
              color: white;
-             padding: 0.75rem 1rem; /* p-3 px-4 */
+             padding: 1.5rem 2rem; /* Increased padding */
              display: flex;
              align-items: center;
              justify-content: space-between; /* Space out logo/title and time */
-             gap: 0.75rem; /* space-x-3 */
+             gap: 1rem; /* Increased gap */
              flex-wrap: wrap; /* Allow wrapping on small screens */
          }
           .embed-header > div {
               display: flex;
               align-items: center;
-              gap: 0.75rem; /* space-x-3 */
+              gap: 1rem; /* Increased gap */
           }
           .embed-header img {
-              height: 2rem; /* h-8 */
-              width: 2rem; /* w-8 */
+              height: 3rem; /* Increased logo size */
+              width: 3rem; /* Increased logo size */
               border-radius: 9999px; /* rounded-full */
           }
           .embed-header h1 {
-              font-size: 1.25rem; /* text-xl */
+              font-size: 1.75rem; /* Increased text size */
               font-weight: bold;
           }
           .embed-header p {
-              font-size: 0.875rem; /* text-sm */
+              font-size: 1rem; /* Increased text size */
               color: #e0e7ff; /* indigo-200 */
           }
           /* Idő kijelző stílusa az embed fejlécben */
           .embed-header #current-time {
-              font-size: 1.125rem; /* text-base */
+              font-size: 1.5rem; /* Increased text size */
               font-weight: bold;
               color: #e0e7ff; /* indigo-200 */
               flex-shrink: 0; /* Prevent shrinking */
@@ -783,11 +820,13 @@ function updateUIBasedOnAuthState(user) {
                      </div>
 
                      <div class="w-full max-w-4xl overflow-x-auto shadow-md rounded-lg border border-gray-200 bg-white p-4">
-                         ${currentDayData.status === 'none' ?
-                             `<div class="large-message"><span class="emoji">✅</span>Nincsenek helyettesítések erre a napra.</div>`
-                         : currentDayData.status === 'whiteboard' ?
-                             `<div class="large-message"><span class="emoji">ℹ️</span>${escapeHtml(currentDayData.message || 'Technikai okok miatt a helyettesítések a fehér táblán találhatók.')}</div>`
-                         : currentDayData.status === 'available' && tableData.length > 0 && columns.length > 0 ?
+                      ${currentDayData.status === 'none' ?
+                         // Using Font Awesome icon
+                         `<div class="large-message large-message-icon"><i class="fas fa-check-circle message-icon text-green-600"></i><p>Nincsenek helyettesítések erre a napra.</p></div>`
+                     : currentDayData.status === 'whiteboard' ?
+                         // Using Font Awesome icon
+                         `<div class="large-message large-message-icon"><i class="fas fa-info-circle message-icon text-blue-600"></i><p>${escapeHtml(currentDayData.message || 'Technikai okok miatt a helyettesítések a fehér táblán találhatók.')}</p></div>`
+                     : currentDayData.status === 'available' && tableData.length > 0 && columns.length > 0 ?
                              `
                              <table id="main-substitutions-table" class="min-w-full divide-y divide-gray-200">
                                  <thead>
@@ -812,7 +851,7 @@ function updateUIBasedOnAuthState(user) {
                              </table>
                              `
                          :
-                             `<div class="large-message"><span class="emoji">🤷‍♀️</span>Nincsenek helyettesítési adatok ehhez a naphoz.</div>`
+                         `<div class="large-message large-message-icon"><i class="fas fa-info-circle message-icon text-blue-600"></i><p>Nincsenek helyettesítési adatok ehhez a napra.</p></div>`
                          }
                      </div>
                  </div>
@@ -1022,7 +1061,7 @@ function updateUIBasedOnAuthState(user) {
              const columns = Array.isArray(currentDayData.columns) ? currentDayData.columns : ["Helyettesített", "Helyettesítő", "Terem/Megjegyzés", "Egyéb"]; // Default headers for public view
 
 
-             let embedHTML = `
+let embedHTML = `
                   <div class="embed-header">
                      <div>
                       <img src="logo.png" alt="SZAG Logo" onerror="this.style.display='none'">
@@ -1031,43 +1070,53 @@ function updateUIBasedOnAuthState(user) {
                           <p class="text-sm text-indigo-200">${formatFullDate(today)}</p>
                       </div>
                      </div>
-                     <span id="current-time" class="embed-view-element">--:--:--</span> </div>
-
-                   <div class="w-full overflow-x-auto p-2">
-                     ${currentDayData.status === 'none' ?
-                         `<div class="large-message"><span class="emoji">✅</span>Nincsenek helyettesítések erre a napra.</div>`
-                     : currentDayData.status === 'whiteboard' ?
-                         `<div class="large-message"><span class="emoji">ℹ️</span>${escapeHtml(currentDayData.message || 'Technikai okok miatt a helyettesítések a fehér táblán találhatók.')}</div>`
-                     : currentDayData.status === 'available' && tableData.length > 0 && columns.length > 0 ?
-                         `
-                         <table id="embed-substitutions-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
-                             <thead>
-                                 <tr>
-                                     <th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Óra</th>
-                                      ${columns.map(header => `
-                                         <th class="px-2 py-1 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">${escapeHtml(header)}</th>
-                                     `).join('')}
-                                 </tr>
-                             </thead>
-                             <tbody class="bg-white divide-y divide-gray-200 text-gray-700 text-sm">
-                                  ${tableData.map((rowData, index) => `
-                                     <tr>
-                                         <td class="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}.</td>
-                                          ${columns.map((header, colIndex) => {
-                                             const colKey = `col${colIndex + 1}`;
-                                             return `<td class="px-2 py-1 whitespace-nowrap">${escapeHtml(rowData[colKey] || '')}</td>`;
-                                         }).join('')}
-                                     </tr>
-                                 `).join('')}
-                             </tbody>
-                         </table>
-                         `
-                     :
-                         `<div class="large-message"><span class="emoji">🤷‍♀️</span>Nincsenek helyettesítési adatok ehhez a napra.</div>`
-                     }
-                   </div>
-             `;
-             publicEmbedViewDiv.innerHTML = embedHTML;
+                     <span id="current-time" class="embed-view-element">--:--:--</span>
+                  </div>
+                   ${currentDayData.status === 'none' ?
+                       // Large message container directly below header, with flex-grow
+                       `<div class="large-message large-message-icon flex-grow">
+                           <i class="fas fa-check-circle message-icon text-green-600"></i>
+                           <p>Nincsenek helyettesítések erre a napra.</p>
+                       </div>`
+                   : currentDayData.status === 'whiteboard' ?
+                       // Large message container directly below header, with flex-grow
+                       `<div class="large-message large-message-icon flex-grow">
+                           <i class="fas fa-info-circle message-icon text-blue-600"></i>
+                           <p>${escapeHtml(currentDayData.message || 'Technikai okok miatt a helyettesítések a fehér táblán találhatók.')}</p>
+                       </div>`
+                   : currentDayData.status === 'available' && tableData.length > 0 && columns.length > 0 ?
+                       // Table container below header, with flex-grow
+                       `<div class="w-full overflow-x-auto p-2 flex-grow">
+                           <table id="embed-substitutions-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+                               <thead>
+                                   <tr>
+                                       <th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Óra</th>
+                                        ${columns.map(header => `
+                                           <th class="px-2 py-1 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">${escapeHtml(header)}</th>
+                                       `).join('')}
+                                   </tr>
+                               </thead>
+                               <tbody class="bg-white divide-y divide-gray-200 text-gray-700 text-sm">
+                                    ${tableData.map((rowData, index) => `
+                                       <tr>
+                                           <td class="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}.</td>
+                                            ${columns.map((header, colIndex) => {
+                                               const colKey = `col${colIndex + 1}`;
+                                               return `<td class="px-2 py-1 whitespace-nowrap">${escapeHtml(rowData[colKey] || '')}</td>`;
+                                           }).join('')}
+                                       </tr>
+                                   `).join('')}
+                               </tbody>
+                           </table>
+                       </div>`
+                   :
+                       // Default message container directly below header, with flex-grow
+                       `<div class="large-message large-message-icon flex-grow">
+                           <i class="fas fa-info-circle message-icon text-blue-600"></i>
+                           <p>Nincsenek helyettesítési adatok ehhez a napra.</p>
+                       </div>`
+                   }
+             `;             publicEmbedViewDiv.innerHTML = embedHTML;
               // MÓDOSÍTVA: Frissítsük a currentTimeSpan referenciát
               // Az új elemet a publicEmbedViewDiv-en belül keressük meg
               currentTimeSpan = publicEmbedViewDiv.querySelector('#current-time');
