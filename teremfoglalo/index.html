@@ -481,11 +481,15 @@
             if (user) {
                 loginPopup.classList.add('hidden');
                 userStatusDiv.innerHTML = `
-                    <span class="text-sm hidden lg:inline" title="${escapeHtml(user.email)}">${escapeHtml(user.nickname || user.displayName || user.email)} ${user.isAdmin ? '<span class="text-yellow-300">(Admin)</span>' : ''}</span>
-                    <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold py-1 px-2 sm:px-3 rounded transition duration-150 ease-in-out">
-                        Kijelentkezés
+                    <button id="logout-button" class="flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold py-1 px-2 sm:px-3 rounded transition duration-150 ease-in-out">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                            <path d="M12 17a2 2 0 100-4 2 2 0 000 4z"/>
+                            <path fill-rule="evenodd" d="M6 8V6a6 6 0 1112 0v2a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V10a2 2 0 012-2zm2-2a4 4 0 118 0v2H8V6z" clip-rule="evenodd"/>
+                        </svg>
+                        ${escapeHtml(user.nickname || user.displayName || user.email)}
                     </button>
                 `;
+
                 const logoutBtn = document.getElementById('logout-button');
                 if (logoutBtn) {
                     logoutBtn.removeEventListener('click', handleLogout);
@@ -674,7 +678,7 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                                                                 <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${roomSpecificIsBookedForDisplay ? 'bg-red-500' : (roomSpecificIsCancelledDisplay ? 'bg-gray-400' : 'bg-green-500')}" title="${roomSpecificIsBookedForDisplay ? 'Foglalt' : (roomSpecificIsCancelledDisplay ? 'Lemondva' : 'Szabad')}"></span>
                                                                 <span class="flex-grow overflow-hidden overflow-ellipsis whitespace-nowrap ${roomSpecificIsBookedForDisplay ? 'text-gray-700' : (roomSpecificIsCancelledDisplay ? 'text-gray-500' : 'text-gray-500')} ${roomSpecificIsCancelledDisplay ? 'line-through text-gray-400' : ''} weekly-booking-details" ${roomSpecificIsBookedForDisplay ? `onclick="showBookingDetails('${roomSpecificBooking.id}', ${roomSpecificIsRecurringMatch})"` : ''} title="${roomSpecificIsBookedForDisplay ? escapeHtml(roomSpecificFullText) : (roomSpecificIsCancelledDisplay ? 'Lemondva' : '')}">
                                                                     ${escapeHtml(room.name)}
-                                                                    ${roomSpecificIsBookedForDisplay ? `<span class="${roomSpecificIsRecurringMatch ? 'text-yellow-700' : 'text-red-700'} font-medium"> (${roomSpecificDisplayName}${roomSpecificIsRecurringMatch ? `<svg class="recurring-indicator-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M13.836 2.477a.75.75 0 01.023 1.06l-4.25 4.5a.75.75 0 01-1.06.023L6.023 5.51a.75.75 0 011.06-1.06l2.19 2.19 3.726-3.936a.75.75 0 011.06-.023zM3.5 7.5a.75.75 0 01.75.75v2.5a.75.75 0 01-1.5 0v-2.5a.75.75 0 01.75-.75zM5.25 11a.75.75 0 000 1.5h5.5a.75.75 0 000-1.5h-5.5z" clip-rule="evenodd" /></svg>` : ''})</span>` : (roomSpecificIsCancelledDisplay ? '<span class="text-gray-500 italic">(Lemondva)</span>' : '')}
+                                                                    ${roomSpecificIsBookedForDisplay ? `<span class="${roomSpecificIsRecurringMatch ? 'text-yellow-700' : 'text-red-700'} font-medium"> (${roomSpecificDisplayName}${roomSpecificIsRecurringMatch ? `<b> (R)</b>` : ''})</span>` : (roomSpecificIsCancelledDisplay ? '<span class="text-gray-500 italic">(Lemondva)</span>' : '')}
                                                                 </span>
                                                                 ${roomSpecificCanBook ? ` 
                                                                     <button
@@ -1005,9 +1009,9 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
         function setupAuthListener() {
              console.log("setupAuthListener() called");
              if (!auth) return showError("Auth szolgáltatás nem inicializálódott.");
-             authStatePromise = new Promise((resolve) => {
-                 const unsubscribe = auth.onAuthStateChanged(async (user) => {
-                     console.log(">>> onAuthStateChanged triggered. User:", user ? user.uid : 'null');
+            authStatePromise = new Promise((resolve) => {
+                const unsubscribe = auth.onAuthStateChanged(async (user) => {
+                    console.log(">>> onAuthStateChanged triggered. User:", user ? user.uid : 'null');
                     let resolvedUser = null;
                     if (user) {
                         console.log("User signed in, checking authorization for UID:", user.uid);
@@ -1054,7 +1058,7 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                                 } else {
                                     console.warn("User not found in pendingUsers either. Access denied:", user.email);
                                     showCustomAlert(`Hozzáférés megtagadva ehhez az email címhez: ${user.email}. Kérj meghívót egy adminisztrátortól.`, "Hiba");
-                                    await auth.signOut();
+                                    await auth.signOut().catch(e => console.error("Sign out failed:", e)); // Added catch
                                     resolvedUser = null;
                                 }
                             }
@@ -1065,7 +1069,10 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                                  errorMessage = 'Nincs jogosultságod ehhez a művelethez (Firebase szabályok).';
                              }
                             showError(errorMessage);
-                            await auth.signOut().catch(e => console.error("Sign out failed after auth error:", e));
+                            // Only sign out if the error was not due to signing out itself
+                             if (error.code !== 'auth/user-signed-out') {
+                                 await auth.signOut().catch(e => console.error("Sign out failed after auth check error:", e));
+                             }
                             resolvedUser = null;
                         }
                     } else {
@@ -1073,6 +1080,7 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                         resolvedUser = null;
                     }
                     updateUIBasedOnAuthState(resolvedUser);
+                    unsubscribe(); // Leiratkozás az első state change után
                     resolve(); // Promise feloldása
                 }, (error) => {
                      console.error("Error in onAuthStateChanged listener:", error);
@@ -1080,7 +1088,7 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                      updateUIBasedOnAuthState(null);
                      resolve();
                 });
-             });
+            });
         }
 
         function handleGoogleLogin() {
@@ -1105,13 +1113,32 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
         }
 
         function handleLogout() {
-              if (!auth) return;
-             console.log("Logging out...");
-             auth.signOut().catch((error) => {
-                console.error("Logout failed:", error);
-                showCustomAlert("Hiba történt a kijelentkezés során.", "Hiba");
-             });
-        }
+    showCustomDialog("Biztosan ki szeretnél jelentkezni?", "confirm", "Kijelentkezés megerősítése")
+        .then(confirmed => {
+            if (confirmed) {
+                if (typeof firebase !== 'undefined' && firebase.auth && typeof firebase.auth === 'function' && typeof auth !== 'undefined' && auth && typeof auth.signOut === 'function') {
+                    // Ha a Firebase és az Auth inicializálva van, és a signOut függvény is elérhető
+                    console.log("Logging out.");
+                    auth.signOut()
+                        .then(() => {
+                            console.log("Sign out successful. Reloading page...");
+                            window.location.reload();
+                        })
+                        .catch((error) => {
+                            console.error("Logout failed:", error);
+                            showCustomAlert("Hiba történt a kijelentkezés során.", "Hiba");
+                        });
+                } else {
+                    // Ha a Firebase Auth szolgáltatás mégsem elérhető
+                    console.warn("Firebase Auth is not initialized or signOut function is not available. Attempting fallback reload.");
+                    showCustomAlert("Hiba a kijelentkezés során. Próbálja meg újra, vagy frissítse az oldalt.", "Hiba");
+                    // Opcionális: Ha nem tudunk kijelentkezni, de szeretnénk biztosítani, hogy az oldal újra töltődjön.
+                    // Ez nem a "tiszta" kijelentkezés, de segíthet helyreállítani az állapotot.
+                    window.location.reload();
+                }
+            }
+        });
+}
 
 
         // --- Firestore Listenerek ---
@@ -1715,23 +1742,25 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
             requestAnimationFrame(() => { customDialog.querySelector('.modal-content').classList.add('modal-enter-active'); });
         }
         function showCustomAlert(message, title = 'Értesítés') { showCustomDialog(message, 'alert', title); }
-        function showCustomConfirm(message, title = 'Megerősítés') {
-            return new Promise((resolve) => {
-                confirmResolve = resolve;
-                const content = customDialog.querySelector('.modal-content');
-                // Ensure modal is visible before applying active class for animation
-                if (!customDialog.classList.contains('active')) {
-                     customDialog.classList.add('active');
-                     requestAnimationFrame(() => {
-                         content.classList.add('modal-enter-active');
-                         showCustomDialog(message, 'confirm', title);
-                     });
-                } else {
-                     // If already active, just update content and buttons
-                     showCustomDialog(message, 'confirm', title);
-                }
-            });
+
+// Teremfoglaló fájlban:
+function showCustomConfirm(message, title = 'Megerősítés') {
+    return new Promise((resolve) => {
+        confirmResolve = resolve;
+        const content = customDialog.querySelector('.modal-content');
+        // Ensure modal is visible before applying active class for animation
+        if (!customDialog.classList.contains('active')) {
+             customDialog.classList.add('active');
+             requestAnimationFrame(() => {
+                 content.classList.add('modal-enter-active');
+                 showCustomDialog(message, 'confirm', title);
+             });
+        } else {
+             // If already active, just update content and buttons
+             showCustomDialog(message, 'confirm', title);
         }
+    });
+}
 
         // --- Foglalás Részletei Popup ---
         function showBookingDetails(bookingId, isRecurringMatch = false) { // isRecurringMatch átvétele
