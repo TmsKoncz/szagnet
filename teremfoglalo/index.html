@@ -34,55 +34,57 @@
         #main-content { flex-grow: 1; overflow-y: auto; padding-bottom: 60px; /* Hely a láblécnek */ }
         footer { flex-shrink: 0; }
 
-        /* Idősáv kártya stílusa (Terem nézet) */
+        /* Idősáv kártya stílusa (Terem nézet) - Frissítve */
         .room-view-card-list .timeslot-box {
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
             position: relative;
-            border-left-width: 4px; /* Vékony szegély */
-            padding-left: 1rem; /* Kisebb behúzás */
-            padding-right: 4.5rem; /* Hely a jobb oldali jelzőnek */
-            padding-top: 0.75rem; /* p-3 */
-            padding-bottom: 0.75rem;
-            min-height: 4.5rem;
+            border-left-width: 6px; /* Vastagabb szegély az oldalán */
+            padding: 1.25rem 1.5rem; /* Nagyobb belső tér */
+            padding-right: 5.5rem; /* Hely a jobb oldali jelzőnek */
+            min-height: 5.5rem; /* Magasabb kártyák */
             display: flex;
             align-items: center;
+            border-radius: 0.75rem; /* Kerekebb sarkok */
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); /* Lágyabb alap árnyék */
         }
         .room-view-card-list .timeslot-box.active {
-            transform: scale(1.05);
-            box-shadow: 0 0 15px rgba(79, 70, 229, 0.4);
+            transform: scale(1.02); /* Kisebb nagyítás */
+            box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.5), 0 4px 6px -2px rgba(79, 70, 229, 0.2); /* Kiemeltebb árnyék */
             border-left-color: #4338ca !important; /* indigo-700 */
             background-color: #e0e7ff; /* indigo-100 */
             z-index: 10;
-            min-height: 5rem;
+            min-height: 6rem;
         }
         .room-view-card-list .timeslot-box.next-up {
             background-color: #f0f9ff; /* sky-50 */
             border-left-color: #7dd3fc; /* sky-300 */
+            box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* Enyhe árnyék */
         }
 
-        /* Jobb oldali állapotjelzők (Terem nézet) */
+        /* Jobb oldali állapotjelzők (Terem nézet) - Frissítve */
         .room-view-card-list .status-indicator {
             position: absolute;
-            right: 0.75rem; /* px-3 */
+            right: 1.25rem; /* Távolabb a széltől */
             top: 50%;
             transform: translateY(-50%);
-            font-size: 0.7rem; /* Extra kicsi */
+            font-size: 0.8rem; /* Kicsit nagyobb */
             font-weight: bold;
-            padding: 0.15rem 0.5rem;
-            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.25rem 0.75rem; /* Nagyobb padding */
+            border-radius: 0.5rem; /* Kerekebb */
             color: white;
             text-transform: uppercase;
+            letter-spacing: 0.05em; /* Kicsit szélesebb betűkösz */
         }
         .room-view-card-list .status-indicator.active { background-color: #16a34a; } /* green-600 */
         .room-view-card-list .status-indicator.next { background-color: #0ea5e9; } /* sky-500 */
 
-        /* Típus jelző (foglaló mellett) */
+        /* Típus jelző (foglaló mellett) - Marad */
         .booking-type-badge {
-            font-size: 0.75rem; /* text-xs */
+            font-size: 0.75rem;
             font-weight: 600;
             padding: 0.1rem 0.4rem;
             border-radius: 0.25rem;
-            background-color: #1f2937; /* gray-800 */
+            background-color: #1f2937;
             color: white;
             margin-left: 0.5rem;
             vertical-align: middle;
@@ -248,7 +250,7 @@
      <div id="booking-details-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="flex justify-between items-center mb-4">
-                 <h3 class="text-xl font-bold text-indigo-700">Foglalás Részletei</h3>
+                 <h3 class="text-xl font-bold text-indigo-700">Foglalás részletei</h3>
                  <button id="booking-details-close" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
             </div>
             <div id="booking-details-content" class="space-y-2 text-gray-800"></div>
@@ -682,7 +684,7 @@ function renderWeeklyView() {
                      <button onclick="changeWeek(-1)" class="week-nav-button bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" /></svg>
                      </button>
-                    <h2 class="text-lg sm:text-xl font-bold text-center text-gray-800"> Heti Teremfoglalások <br class="sm:hidden"> (${formatShortDate(weekDates[0])} - ${formatShortDate(weekDates[4])})
+                    <h2 class="text-lg sm:text-xl font-bold text-center text-gray-800"> Heti teremfoglalások <br class="sm:hidden"> (${formatShortDate(weekDates[0])} - ${formatShortDate(weekDates[4])})
                     </h2>
                      <button onclick="changeWeek(1)" class="week-nav-button bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" /></svg>
@@ -764,7 +766,7 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                                                                 <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${roomSpecificIsBookedForDisplay ? 'bg-red-500' : (roomSpecificIsCancelledDisplay ? 'bg-gray-400' : 'bg-green-500')}" title="${roomSpecificIsBookedForDisplay ? 'Foglalt' : (roomSpecificIsCancelledDisplay ? 'Lemondva' : 'Szabad')}"></span>
                                                                 <span class="flex-grow overflow-hidden overflow-ellipsis whitespace-nowrap ${roomSpecificIsBookedForDisplay ? 'text-gray-700' : (roomSpecificIsCancelledDisplay ? 'text-gray-500' : 'text-gray-500')} ${roomSpecificIsCancelledDisplay ? 'line-through text-gray-400' : ''} weekly-booking-details" ${roomSpecificIsBookedForDisplay ? `onclick="showBookingDetails('${roomSpecificBooking.id}', ${roomSpecificIsRecurringMatch})"` : ''} title="${roomSpecificIsBookedForDisplay ? escapeHtml(roomSpecificFullText) : (roomSpecificIsCancelledDisplay ? 'Lemondva' : '')}">
                                                                     ${escapeHtml(room.name)}
-                                                                    ${roomSpecificIsBookedForDisplay ? `<span class="${roomSpecificIsRecurringMatch ? 'text-yellow-700' : 'text-red-700'} font-medium"> (${escapeHtml(roomSpecificBooking.user)}${roomSpecificIsRecurringMatch ? `<b> (R)</b>` : ''})</span>` : (roomSpecificIsCancelledDisplay ? '<span class="text-gray-500 italic">(Lemondva)</span>' : '')}
+                                                                    ${roomSpecificIsBookedForDisplay ? `<span class="${roomSpecificIsRecurringMatch ? 'text-gray-900' : 'text-red-700'} font-medium"> (${escapeHtml(roomSpecificBooking.user)}${roomSpecificIsRecurringMatch ? `<b> (R)</b>` : ''})</span>` : (roomSpecificIsCancelledDisplay ? '<span class="text-gray-500 italic">(Lemondva, foglalható)</span>' : '')}
                                                                 </span>
                                                                 ${roomSpecificCanBook ? `
                                                                     <button
@@ -772,7 +774,7 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                                                                         class="ml-auto text-indigo-600 hover:text-indigo-900 text-[10px] font-semibold px-1 py-0.5 rounded hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity User ?}"
                                                                         title="Foglalás: ${escapeHtml(room.name)}, ${dayName} (${dateString}), ${escapeHtml(slot.value)}"
                                                                         ${!currentUser ? 'disabled' : ''}>
-                                                                        Foglal
+                                                                        Foglalás
                                                                     </button>
                                                                 ` : ''}
                                                                  ${roomSpecificCanCancelInstance ? `
@@ -780,15 +782,15 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                                                                         onclick="cancelRecurringInstance('${roomSpecificRecurringBookingId}', '${dateString}', '${escapeJsString(room.name)}', '${dayName} (${dateString})', '${escapeJsString(slot.value)}')"
                                                                         class="ml-1 text-orange-600 hover:text-orange-800 text-[10px] font-semibold px-1 py-0.5 rounded hover:bg-orange-50 opacity-0 group-hover:opacity-100 transition-opacity"
                                                                         title="Egyszeri lemondás erre a napra">
-                                                                        Lemond
+                                                                        Lemondás mára
                                                                     </button>
                                                                 ` : ''}
                                                                 ${roomSpecificIsBookedForDisplay && roomSpecificCanDelete ? `
                                                                     <button
                                                                         onclick="deleteBooking('${roomSpecificBooking.id}', '${escapeJsString(room.name)}', '${dayName} (${dateString})', '${escapeJsString(slot.value)}', '${escapeJsString(roomSpecificBooking.user)}', ${roomSpecificIsRecurringMatch})"
                                                                         class="ml-1 text-red-500 hover:text-red-800 text-[10px] font-semibold px-1 py-0.5 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                        title="Foglalás Törlése ${roomSpecificIsRecurringMatch ? '(Teljes Rendszeres!)' : ''}">
-                                                                        X
+                                                                        title="Foglalás törlése ${roomSpecificIsRecurringMatch ? '(Teljes Rendszeres!)' : ''}">
+                                                                        Törlés
                                                                     </button>
                                                                 ` : ''}
                                                             </li>
@@ -1024,7 +1026,7 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
             let adminHTML = `
                 <div class="p-4 md:p-6 bg-white rounded-lg shadow space-y-8 relative">
                      <div id="admin-action-overlay" class="hidden"><div class="spinner"></div> <span class="ml-3 text-gray-700">Folyamatban...</span></div>
-                    <h2 class="text-2xl font-bold text-center text-indigo-700">Adminisztrációs Felület</h2>
+                    <h2 class="text-2xl font-bold text-center text-indigo-700">Adminisztráció</h2>
                     <section>
                     <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Napi összesítő link</h3>
                     <div class="flex items-center space-x-2">
@@ -1034,14 +1036,14 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                     </section>
 
                     <section>
-                        <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Hirdetmény/Üzenet a Főoldalra</h3>
+                        <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Üzenet a főoldalon</h3>
                         <textarea id="admin-announcement" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" rows="3" placeholder="Írj ide egy rövid üzenetet... (üresen hagyva törlődik)">${escapeHtml(announcement)}</textarea>
                         <div class="text-right mt-2">
-                             <button id="save-announcement-button" data-action="save-announcement" class="admin-action-button px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">Üzenet Mentése</button>
+                             <button id="save-announcement-button" data-action="save-announcement" class="admin-action-button px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">Mentés</button>
                         </div>
                     </section>
                     <section>
-                        <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Termek Kezelése</h3>
+                        <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Termek</h3>
                         <ul id="admin-rooms-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto border rounded p-2">${rooms.length === 0 ? '<li class="text-gray-500 italic">Nincsenek termek.</li>' : [...rooms].sort((a, b) => a.name.localeCompare(b.name)).map(room => `<li data-id="${room.id}" class="flex flex-col p-2 border-b last:border-b-0 space-y-1">
   <div class="flex justify-between items-center">
     <span>${escapeHtml(room.name)}</span>
@@ -1053,19 +1055,19 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
   </div>
 </li>
 `).join('')}</ul>
-                        <div class="flex items-end space-x-2"><div class="flex-grow"><label for="newRoomName" class="block text-sm font-medium text-gray-700 mb-1">Új terem neve:</label><input type="text" id="newRoomName" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. Fizika Szertár"></div><button id="add-room-button" data-action="add-room" class="admin-action-button px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150 h-10">Hozzáad</button></div>
+                        <div class="flex items-end space-x-2"><div class="flex-grow"><label for="newRoomName" class="block text-sm font-medium text-gray-700 mb-1">Új terem neve:</label><input type="text" id="newRoomName" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. IKT-999"></div><button id="add-room-button" data-action="add-room" class="admin-action-button px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150 h-10">Hozzáadás</button></div>
                     </section>
                     <section>
                          <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Idősávok Kezelése</h3>
                          <ul id="admin-timeslots-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto border rounded p-2">${timeSlots.length === 0 ? '<li class="text-gray-500 italic">Nincsenek idősávok.</li>' : [...timeSlots].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map(slot => `<li data-id="${slot.id}" class="flex justify-between items-center p-2 border-b last:border-b-0"><span>${escapeHtml(slot.value)} (Sorrend: ${slot.order ?? 'N/A'})</span><button data-action="delete-timeslot" class="admin-action-button text-red-600 hover:text-red-800 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50">Törlés</button></li>`).join('')}</ul>
-                         <div class="flex items-end space-x-2"><div class="flex-grow"><label for="newTimeSlotValue" class="block text-sm font-medium text-gray-700 mb-1">Új idősáv (óó:pp - óó:pp):</label><input type="text" id="newTimeSlotValue" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. 16:00 - 16:45"></div><div class="w-20"><label for="newTimeSlotOrder" class="block text-sm font-medium text-gray-700 mb-1">Sorrend:</label><input type="number" id="newTimeSlotOrder" value="${nextOrder}" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="0" min="0"></div><button id="add-timeslot-button" data-action="add-timeslot" class="admin-action-button px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150 h-10">Hozzáad</button></div>
+                         <div class="flex items-end space-x-2"><div class="flex-grow"><label for="newTimeSlotValue" class="block text-sm font-medium text-gray-700 mb-1">Új idősáv (óó:pp - óó:pp):</label><input type="text" id="newTimeSlotValue" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pl. 16:00 - 16:45"></div><div class="w-20"><label for="newTimeSlotOrder" class="block text-sm font-medium text-gray-700 mb-1">Sorrend:</label><input type="number" id="newTimeSlotOrder" value="${nextOrder}" class="admin-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="0" min="0"></div><button id="add-timeslot-button" data-action="add-timeslot" class="admin-action-button px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150 h-10">Hozzáadás</button></div>
                     </section>
                     <section>
-                        <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Engedélyezett Felhasználók (Aktív)</h3>
+                        <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Regisztrált felhasználók</h3>
                         <ul id="admin-users-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto border rounded p-2">${allowedUsers.length === 0 ? '<li class="text-gray-500 italic">Nincsenek engedélyezett felhasználók.</li>' : allowedUsers.map(allowedUser => `<li data-id="${allowedUser.id}" data-email="${escapeHtml(allowedUser.email)}" data-isadmin="${allowedUser.isAdmin}" data-nickname="${escapeHtml(allowedUser.nickname || '')}" class="flex flex-wrap justify-between items-center p-2 border-b last:border-b-0 gap-2"><div class="flex-grow"><span class="text-sm font-medium">${escapeHtml(allowedUser.nickname || allowedUser.email || 'N/A')}</span>${allowedUser.nickname ? `<span class="text-xs text-gray-500 block">(${escapeHtml(allowedUser.email || 'N/A')})</span>` : ''}<span class="text-xs text-gray-500 block break-all">UID: ${allowedUser.id}</span></div><div class="flex space-x-2 flex-shrink-0 items-center">${allowedUser.isAdmin ? '<span class="font-bold text-purple-700 text-xs mr-2">(Admin)</span>' : ''}<button data-action="edit-user" class="admin-action-button text-xs px-2 py-1 rounded bg-gray-500 hover:bg-gray-600 text-white">Név Szerk.</button><button data-action="toggle-admin" class="admin-action-button text-xs px-2 py-1 rounded ${allowedUser.isAdmin ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white ${allowedUser.id === currentUser.uid ? 'opacity-50 cursor-not-allowed' : ''}" ${allowedUser.id === currentUser.uid ? 'disabled' : ''}>${allowedUser.isAdmin ? 'Admin Elvétel' : 'Admin Adás'}</button><button data-action="delete-user" class="admin-action-button text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 ${allowedUser.id === currentUser.uid ? 'opacity-50 cursor-not-allowed' : ''}" ${allowedUser.id === currentUser.uid ? 'disabled' : ''}>Eltávolít</button></div></li>`).join('')}</ul>
                     </section>
                     <section>
-                        <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Meghívott Felhasználók (Email Alapú)</h3>
+                        <h3 class="text-xl font-semibold mb-3 text-gray-800 border-b pb-2">Meghívott felhasználók</h3>
                         <ul id="admin-pending-users-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto border rounded p-2">
                             ${pendingUsers.length === 0 ? '<li class="text-gray-500 italic">Nincsenek meghívott felhasználók.</li>' :
                                 pendingUsers.map(pending => `
@@ -1647,7 +1649,7 @@ let roomSpecificSingleBooking = singleBookingsThisWeek.find(b => b.roomId === ro
                  return;
              }
 
-             const confirmationMessage = `Biztosan törölni szeretnéd ezt a foglalást?\nTerem: ${roomName}\nIdőpont: ${dayDisplay} ${timeSlot}\nFoglaló: ${bookedBy}` + (isRecurring ? "\n\nFIGYELEM: Ez egy RENDSZERES foglalás törlése, ami minden hétről eltávolítja!" : "");
+             const confirmationMessage = `Biztosan törölni szeretnéd ezt a foglalást?\nTerem: ${roomName}\nIdőpont: ${dayDisplay} ${timeSlot}\nFoglaló: ${bookedBy}` + (isRecurring ? "\n\n<b>FIGYELEM! Ez egy RENDSZERES foglalás törlése, ami minden hétről eltávolítja!</b>" : "");
              const confirmed = await showCustomConfirm(confirmationMessage, "Megerősítés");
              if (confirmed) {
                  console.log(`Deleting booking: ${bookingId} (Recurring: ${isRecurring})`);
@@ -2042,7 +2044,7 @@ function showCustomConfirm(message, title = 'Megerősítés') {
             const canDelete = currentUser && (currentUser.isAdmin || (currentUser.uid === booking.userId && booking.type === 'single'));
             if (canDelete) {
                  const deleteButton = document.createElement('button');
-                 deleteButton.textContent = 'Foglalás Törlése';
+                 deleteButton.textContent = 'Törlés';
                  deleteButton.className = 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-150';
                  deleteButton.onclick = () => {
                      closeBookingDetailsModal();
