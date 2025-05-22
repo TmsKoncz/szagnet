@@ -22,30 +22,30 @@
         .modal-content { background-color: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); transform: scale(0.95); transition: transform 300ms ease-in-out; max-width: 500px; width: 100%; }
         .modal-overlay.active .modal-content { transform: scale(1); }
         .hidden { display: none !important; }
-
+    
         /* Admin overlay */
         #admin-action-overlay { position: absolute; inset: 0; background-color: rgba(255, 255, 255, 0.75); display: flex; justify-content: center; align-items: center; z-index: 20; }
         #admin-action-overlay.hidden { display: none; }
         #admin-action-overlay .spinner { width: 24px; height: 24px; }
-
+    
         /* Betöltési állapot */
         .view-loading::after { content: 'Adatok betöltése...'; display: block; text-align: center; padding: 2rem; color: #6b7280; font-style: italic; }
-
+    
         /* Teljes képernyős elrendezés */
         html, body { height: 100%; }
         body { display: flex; flex-direction: column; }
         #main-content { flex-grow: 1; overflow-y: auto; padding-bottom: 60px; /* Hely a láblécnek */ }
         footer { flex-shrink: 0; }
-
+    
         /* Publikus nézetek táblázat stílusok */
         #public-main-view table,
-    #public-embed-view table,
-    #edit-view table { /* Hozzáadva az edit-view table is */
-        width: 100%;
-        border-collapse: collapse;
-        table-layout: fixed; /* Ezt add hozzá! */
-    }
-
+        #public-embed-view table, /* MÓDOSÍTÁS ALKALMAZVA ITT IS */
+        #edit-view table { /* Hozzáadva az edit-view table is */
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+    
         #public-main-view table th,
         #public-main-view table td {
             padding: 0.5rem 0.75rem;
@@ -55,43 +55,51 @@
             white-space: pre-wrap; /* Megőrzi a sortöréseket és szóközöket */
             word-break: break-word; /* Sortörés hosszú szavaknál */
         }
+    
+        /* === EMBED NÉZET TÁBLÁZAT SKÁLÁZÁS === */
         #public-embed-view table th,
         #public-embed-view table td {
-             padding: 0.75rem 1rem; /* Adjusted padding */
-             font-size: 1.5vw; /* Fixed font size for Full HD */
-             border: 1px solid #e5e7eb; /* gray-200 */
-             text-align: center; /* Középre igazítás */
-             font-weight: bold; /* Félkövér betűk */
-             white-space: pre-wrap; /* Megőrzi a sortöréseket és szóközöket */
-             word-break: break-word; /* Sortörés hosszú szavaknál */
+             padding: 0.8vw 1vw;   /* VW alapú padding */
+             font-size: 1.5vw;     /* Meglévő VW alapú betűméret */
+             border: 1px solid #e5e7eb; /* Keret maradhat 1px, vagy átváltható vékony vw-re pl. 0.05vw */
+             text-align: center;
+             font-weight: bold;
+             white-space: pre-wrap;
+             word-break: break-word;
         }
-
-        #public-main-view table th,
-        #public-embed-view table th {
+    
+        #public-main-view table th, /* Public Main nézet fejlécei maradnak rem alapon */
+        #public-embed-view table th { /* Embed nézet fejlécei VW alapon */
             background-color: #f3f4f6; /* gray-100 */
             font-weight: bold;
-            text-align: center; /* Középre igazítás */
+            text-align: center;
         }
+        /* Embed nézet táblázat fejléc specifikus betűméret */
+        #public-embed-view table th {
+            font-size: 1.6vw; /* Kicsit nagyobb betűméret a fejléceknek */
+        }
+    
          #public-main-view table tr:nth-child(even),
          #public-embed-view table tr:nth-child(even) {
              background-color: #f9fafb; /* gray-50 */
          }
          #public-main-view table tr td:first-child,
-         #public-embed-view table tr td:first-child {
-             font-weight: normal; /* Óra számozás nem félkövér */
-             /* text-align: left; */ /* Óra számozás balra igazítva */
+         #public-embed-view table tr td:first-child { /* Első oszlop betűsúlya normál marad */
+             font-weight: normal;
          }
-         /* Embed nézet első oszlop szélességének fixálása tartalomra */
+    
+         /* Embed nézet első oszlop ("Óra") szélességének VW alapú fixálása */
          #public-embed-view table th:first-child,
          #public-embed-view table td:first-child {
-             width: 50px; /* Fix vékony szélesség */
-             min-width: 50px;
-             max-width: 50px;
-             white-space: nowrap; /* Ne törje a sort */
-             padding-left: 0.5rem;
-             padding-right: 0.5rem;
-             text-align: center; /* Középre igazítás az óra számnak */
+             width: 4vw;       /* VW alapú szélesség */
+             min-width: 4vw;
+             max-width: 4vw;
+             white-space: nowrap;
+             padding-left: 0.5vw;  /* VW alapú padding */
+             padding-right: 0.5vw; /* VW alapú padding */
+             text-align: center;
          }
+    
           #public-main-view table th:first-child,
           #public-main-view table td:first-child {
               /* Responsive width for first column in main view */
@@ -105,8 +113,8 @@
           #public-embed-view table td:not(:first-child) {
                width: auto; /* Automatikus szélesség */
            }
-
-
+    
+    
         /* Admin szerkesztő táblázat stílusok */
         #edit-view table {
             width: 100%;
@@ -167,28 +175,21 @@
            #edit-view table td:not(:first-child) {
                width: auto; /* Automatikus szélesség */
            }
-
+    
            /* Új oszlop törlés gomb container és gombok stílusa */
            #admin-column-remove-controls {
                display: flex;
-               /* Align the first item (empty div) with the first table column */
-               /* Align subsequent buttons with the data columns */
-               /* This requires careful coordination with table column widths */
-               /* Using flex-grow might approximate equal widths */
            }
-
             #admin-column-remove-controls > div:first-child {
-                /* This div aligns with the first column (Óra) */
-                flex-basis: 50px; /* Match the fixed width of the first column */
+                flex-basis: 50px;
                 min-width: 50px;
                 max-width: 50px;
-                flex-shrink: 0; /* Prevent shrinking */
+                flex-shrink: 0;
             }
-
            #admin-column-remove-controls button {
-               flex-grow: 1; /* Allow buttons to grow and fill space */
-               flex-shrink: 1; /* Allow buttons to shrink */
-               flex-basis: 0; /* Initial size before growing/shrinking */
+               flex-grow: 1;
+               flex-shrink: 1;
+               flex-basis: 0;
                background-color: #ef4444; /* red-500 */
                color: white;
                padding: 0.25rem 0.5rem; /* px-2 py-1 */
@@ -196,10 +197,10 @@
                font-size: 0.75rem; /* text-xs */
                font-weight: bold;
                text-align: center;
-               margin-bottom: 0.25rem; /* Space between button and header */
+               margin-bottom: 0.25rem;
                opacity: 0.8;
                transition: opacity 0.2s ease-in-out;
-               border: none; /* Remove default button border */
+               border: none;
                cursor: pointer;
            }
            #admin-column-remove-controls button:hover {
@@ -210,145 +211,146 @@
                cursor: not-allowed;
                opacity: 0.3;
            }
-
-
-/* Embed nézet stílusok */
-html, body { height: 100%; margin: 0; padding: 0;} /* Ensure html and body take full height */
+    
+    
+        /* === EMBED NÉZET ÁLTALÁNOS SKÁLÁZÁSI BEÁLLÍTÁSOK === */
+        html, body { height: 100%; margin: 0; padding: 0;}
         body.embed-view {
             padding-top: 0 !important;
             margin-top: 0 !important;
-            display: flex; /* Use flexbox for layout */
-            flex-direction: column; /* Stack children vertically */
-            height: 100% !important; /* Ensure body takes full viewport height */
-            overflow: hidden !important; /* Hide body scrollbar, main-content will scroll */
+            display: flex;
+            flex-direction: column;
+            height: 100% !important;
+            overflow: hidden !important; /* Megakadályozza a scrollbarokat, ha a tartalom jól skálázódik */
         }
+
+        
         body.embed-view #app-header,
         body.embed-view footer,
-        body.embed-view #announcement-bar { /* Hirdetmény elrejtése az embed nézetben */
+        body.embed-view #announcement-bar {
             display: none !important;
         }
          body.embed-view #main-content {
              padding-top: 0 !important;
              margin-top: 0 !important;
              padding-bottom: 0 !important;
-             flex-grow: 1; /* Allow main content to fill remaining height */
-             overflow-y: auto; /* Enable vertical scrolling within main content */
+             flex-grow: 1;
+             overflow-y: auto; /* Marad, ha a tartalom mégis nagyobb lenne */
          }
-         body.embed-view .container {
-             max-width: none !important; /* Remove max-width for full width */
-             padding: 0 !important; /* Remove padding */
-             margin: 0 !important; /* Remove margin */
+         body.embed-view .container { /* #main-content .container */
+             max-width: none !important;
+             padding: 0 !important;
+             margin: 0 !important;
          }
           body.embed-view #public-embed-view {
               padding: 0 !important;
-               display: flex; /* Use flexbox for embed view content */
+               display: flex;
                flex-direction: column;
-               flex-grow: 1; /* Allow embed view to grow */
+               flex-grow: 1;
           }
+          /* Következő két szabály valószínűleg már nem releváns az új JS struktúrával,
+             de ártani nem ártanak, ha valamilyen régi elem használná őket. */
           body.embed-view #public-embed-view .flex-col {
               padding: 0 !important;
           }
           body.embed-view #public-embed-view .items-center {
-              align-items: flex-start !important; /* Align items to start */
-              text-align: left !important; /* Align text to left */
+              align-items: flex-start !important;
+              text-align: left !important;
           }
           body.embed-view #public-embed-view .items-center h1,
           body.embed-view #public-embed-view .items-center p {
               text-align: left !important;
-              margin-left: 0.5rem; /* Add some left margin */
-              margin-right: 0.5rem; /* Add some right margin */
+              /* Margók VW alapon, ha szükségesek lennének itt */
+              /* margin-left: 0.5vw; */
+              /* margin-right: 0.5vw; */
           }
           body.embed-view #public-embed-view .items-center img {
-              margin-left: 0.5rem; /* Add some left margin */
+              /* margin-left: 0.5vw; */
           }
-          body.embed-view #public-embed-view .overflow-x-auto {
-              overflow-x: auto; /* Keep horizontal scroll for table */
-              flex-grow: 1; /* Allow the table container to grow */
+          body.embed-view #public-embed-view .overflow-x-auto { /* Táblázat konténerre vonatkozik */
+              overflow-x: auto;
+              flex-grow: 1;
           }
-
-
-        /* Nagy hiba/infó üzenet stílus */
-        .large-message {
-            font-size: 4vmin; /* Nagy betűméret viewport alapján */
+    
+    
+        /* Nagy hiba/infó üzenet stílus (nem ikonnal ellátott) */
+        .large-message { /* Ez vmin-t használ, ami szintén reszponzív, maradhat */
+            font-size: 4vmin;
             font-weight: bold;
             text-align: center;
-            margin-top: 5vh; /* Függőleges margó viewport alapján */
+            margin-top: 5vh;
             color: #4b5563; /* gray-700 */
-            padding: 0 1rem; /* Kis oldalsó padding */
+            padding: 0 1rem; /* Ezt át lehet írni vw-re, pl. 2vw, ha szükséges */
         }
-/* Stílus az ikonnal ellátott nagy üzenetekhez (embed nézetben) */
-.large-message.large-message-icon {
-            display: flex; /* Use flexbox to align icon and text */
-            align-items: center; /* Vertically center items within the flex container */
-            justify-content: center; /* Horizontally center the content */
-            text-align: left; /* Align text to the left within its container */
-            width: 100%; /* Ensure it takes full width */
-            margin-top: 0; /* Remove top margin */
-            padding: 1rem; /* Add some padding */
-            flex-direction: row; /* Arrange icon and text in a row */
-            flex-grow: 1; /* Allow this div to grow and fill available vertical space */
-             /* Set min-height to 100% minus header height to ensure vertical centering */
-             /* You might need to adjust '4rem' if your header height is different */
-            min-height: calc(100% - 4rem); /* Adjust based on actual header height */
+    
+        /* === EMBED NÉZET: IKONNAL ELLÁTOTT NAGY ÜZENETEK SKÁLÁZÁSA === */
+        /* (A JS kód már kezeli a vertikális pozicionálást spacer div-ekkel) */
+        .large-message.large-message-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: left;
+            max-width: 70vw; /* Maximális szélesség, hogy ne legyen túl nyújtott nagy képernyőn */
+            padding: 1.5vw; /* Belső padding VW alapon */
+            flex-direction: row;
+            /* flex-grow: 1; MARAD KIKOMMENTEZVE/TÖRÖLVE, a JS wrapper intézi a helykitöltést */
         }
-
+    
         .large-message.large-message-icon .message-icon {
-            font-size: 5rem; /* Increased icon size */
-            margin-right: 2rem; /* Increased space between icon and text */
-            flex-shrink: 0; /* Prevent icon from shrinking */
+            font-size: 7vw; /* Ikon mérete VW alapon */
+            margin-right: 2vw; /* Távolság az ikontól VW alapon */
+            flex-shrink: 0;
             width: auto;
             height: auto;
         }
-
+    
         .large-message.large-message-icon p {
-             font-size: 2rem; /* Increased text size */
+             font-size: 2.5vw; /* Szöveg mérete VW alapon */
              font-weight: bold;
-             color: #4b5563; /* gray-700 */
-             margin: 0; /* Remove default paragraph margin */
-             max-width: 80%; /* Limit text width to prevent it from pushing the icon too far */
-             text-align: left; /* Ensure text is left-aligned */
-             line-height: 1.4; /* Adjust line height for better readability */
+             color: #4b5563;
+             margin: 0;
+             max-width: 100%; /* A belső p töltse ki a .large-message.large-message-icon max-widthját */
+             text-align: left;
+             line-height: 1.4; /* Sormagasság */
         }
-
-/* Embed fejléc stílus */
-.embed-header {
-             background-color: #4f46e5; /* indigo-600 */
-             color: white;
-             padding: 1.5rem 2rem; /* Increased padding */
-             display: flex;
-             align-items: center;
-             justify-content: space-between; /* Space out logo/title and time */
-             gap: 1rem; /* Increased gap */
-             flex-wrap: wrap; /* Allow wrapping on small screens */
+    
+        /* === EMBED NÉZET FEJLÉC SKÁLÁZÁSA === */
+        #public-embed-view .embed-header { /* Specifikusabb selector, ha csak a #public-embed-view-n belüli fejlécet célozzuk */
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+            padding: 1.25vw 1.8vw; /* VW alapú padding (eredetileg 1.5rem 2rem) */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.25vw; /* VW alapú rés (eredetileg 1rem) */
+            flex-wrap: wrap;
          }
-          .embed-header > div {
+          #public-embed-view .embed-header > div { /* Logo és cím csoportja */
               display: flex;
               align-items: center;
-              gap: 1rem; /* Increased gap */
+              gap: 1.25vw; /* VW alapú rés */
           }
-          .embed-header img {
-              height: 3rem; /* Increased logo size */
-              width: 3rem; /* Increased logo size */
+          #public-embed-view .embed-header img {
+              height: 3.5vw; /* Logó mérete VW alapon (eredetileg 3rem) */
+              width: 3.5vw;
               border-radius: 9999px; /* rounded-full */
           }
-          .embed-header h1 {
-              font-size: 1.75rem; /* Increased text size */
+          #public-embed-view .embed-header h1 {
+              font-size: 2vw; /* Cím mérete VW alapon (eredetileg 1.75rem) */
               font-weight: bold;
           }
-          .embed-header p {
-              font-size: 1rem; /* Increased text size */
+          #public-embed-view .embed-header p { /* Alcím (dátum) */
+              font-size: 1.2vw; /* Alcím mérete VW alapon (eredetileg 1rem) */
               color: #e0e7ff; /* indigo-200 */
           }
           /* Idő kijelző stílusa az embed fejlécben */
-          .embed-header #current-time {
-              font-size: 1.5rem; /* Increased text size */
+          #public-embed-view .embed-header #current-time {
+              font-size: 1.8vw; /* Idő mérete VW alapon (eredetileg 1.5rem) */
               font-weight: bold;
               color: #e0e7ff; /* indigo-200 */
-              flex-shrink: 0; /* Prevent shrinking */
-               display: block !important; /* Biztosítsuk, hogy látható legyen az embed fejlécben */
+              flex-shrink: 0;
+              display: block !important; /* Biztosítsuk, hogy látható legyen */
           }
-
-
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -992,7 +994,8 @@ function updateUIBasedOnAuthState(user) {
                                  <option value="available" ${selectedDateData.status === 'available' ? 'selected' : ''}>Vannak helyettesítések</option>
                              </select>
                          </div>
-                         <button id="save-substitutions-button" data-action="save-substitutions" class="admin-action-button px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">Mentés</button>
+                         <button id="save-substitutions-button" data-action="save-substitutions" class="admin-action-button px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">Publikálás most</button>
+                         <button id="save-and-publish-button" data-action="save-and-publish" class="admin-action-button px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-150">Mentés</button>
                      </section>
 
                      <section id="admin-message-section" class="${selectedDateData.status === 'whiteboard' ? '' : 'hidden'}">
@@ -1049,84 +1052,129 @@ function updateUIBasedOnAuthState(user) {
 
 
          /** Publikus embed nézet generálása */
-         function renderPublicEmbedView() {
-             console.log("Rendering Public Embed View...");
-             publicEmbedViewDiv.innerHTML = '';
 
-             const today = new Date();
-             const todayDateString = formatDateYYYYMMDD(today);
-             const todayDayName = getTodayDayName();
+function renderPublicEmbedView() {
+  console.log("Rendering Public Embed View...");
+  publicEmbedViewDiv.innerHTML = ''; // 💣 töröljük az előző tartalmat
 
-             const currentDayData = substitutionData[todayDateString] || { status: 'none', message: '', tableData: [] };
-             // Ensure tableData is an array for rendering, even if empty
-             const tableData = Array.isArray(currentDayData.tableData) ? currentDayData.tableData : [];
-             // Ensure columns array exists for rendering, even if empty
-             const columns = Array.isArray(currentDayData.columns) ? currentDayData.columns : ["Helyettesített", "Helyettesítő", "Terem/Megjegyzés", "Egyéb"]; // Default headers for public view
+  const today = new Date();
+  const todayDateString = formatDateYYYYMMDD(today);
 
+  // Próbáljuk először a publicEmbed/today-t
+  firestore.collection("publicEmbed").doc("today").get().then((embedDoc) => {
+    let currentDayDataToRender;
+    let dataSource = "publicEmbed/today";
 
-let embedHTML = `
-                  <div class="embed-header">
-                     <div>
-                      <img src="logo.png" alt="SZAG Logo" onerror="this.style.display='none'">
-                      <div class="flex flex-col">
-                          <h1 class="text-xl font-bold">SZAG Helyettesítések</h1>
-                          <p class="text-sm text-indigo-200">${formatFullDate(today)}</p>
-                      </div>
-                     </div>
-                     <span id="current-time" class="embed-view-element">--:--:--</span>
-                  </div>
-                   ${currentDayData.status === 'none' ?
-                       // Large message container directly below header, with flex-grow
-                       `<div class="large-message large-message-icon flex-grow">
-                           <i class="fas fa-check-circle message-icon text-green-600"></i>
-                           <p>Nincsenek helyettesítések erre a napra.</p>
-                       </div>`
-                   : currentDayData.status === 'whiteboard' ?
-                       // Large message container directly below header, with flex-grow
-                       `<div class="large-message large-message-icon flex-grow">
-                           <i class="fas fa-info-circle message-icon text-blue-600"></i>
-                           <p>${escapeHtml(currentDayData.message || 'Technikai okok miatt a helyettesítések a fehér táblán találhatók.')}</p>
-                       </div>`
-                   : currentDayData.status === 'available' && tableData.length > 0 && columns.length > 0 ?
-                       // Table container below header, with flex-grow
-                       `<div class="w-full overflow-x-auto p-2 flex-grow">
-                           <table id="embed-substitutions-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
-                               <thead>
-                                   <tr>
-                                       <th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Óra</th>
-                                        ${columns.map(header => `
-                                           <th class="px-2 py-1 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">${escapeHtml(header)}</th>
-                                       `).join('')}
-                                   </tr>
-                               </thead>
-                               <tbody class="bg-white divide-y divide-gray-200 text-gray-700 text-sm">
-                                    ${tableData.map((rowData, index) => `
-                                       <tr>
-                                           <td class="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}.</td>
-                                            ${columns.map((header, colIndex) => {
-                                               const colKey = `col${colIndex + 1}`;
-                                               return `<td class="px-2 py-1 whitespace-nowrap">${escapeHtml(rowData[colKey] || '')}</td>`;
-                                           }).join('')}
-                                       </tr>
-                                   `).join('')}
-                               </tbody>
-                           </table>
-                       </div>`
-                   :
-                       // Default message container directly below header, with flex-grow
-                       `<div class="large-message large-message-icon flex-grow">
-                           <i class="fas fa-info-circle message-icon text-blue-600"></i>
-                           <p>Nincsenek helyettesítési adatok ehhez a napra.</p>
-                       </div>`
-                   }
-             `;             publicEmbedViewDiv.innerHTML = embedHTML;
-              // MÓDOSÍTVA: Frissítsük a currentTimeSpan referenciát
-              // Az új elemet a publicEmbedViewDiv-en belül keressük meg
-              currentTimeSpan = publicEmbedViewDiv.querySelector('#current-time');
-             console.log("Updated currentTimeSpan reference in renderPublicEmbedView:", currentTimeSpan);
-         }
+    if (embedDoc.exists) {
+      console.log("Embed dokumentum elérhető, ezt használjuk.");
+      currentDayDataToRender = embedDoc.data();
+    } else {
+      dataSource = "substitutions/" + todayDateString + " (fallback)";
+      console.log("Nincs publikált embed adat, megpróbáljuk a substitutions/" + todayDateString + "-t.");
+      // Ezt a részt szinkronná kellene tenni vagy a belső logikát módosítani,
+      // de a gyors javításhoz feltételezzük, hogy a renderEmbedData-t hívjuk meg a megfelelő adatokkal.
+      // Az egyszerűség kedvéért most itt egy placeholder adatot használunk, ha a fallback is hiányozna.
+      currentDayDataToRender = substitutionData[todayDateString] || { status: 'none', message: '', tableData: [], forDate: todayDateString };
+      if (!subDoc.exists && !substitutionData[todayDateString]) { // Ha a fallback adat is üres alapértelmezett
+          currentDayDataToRender.forDate = todayDateString; // Biztosítjuk, hogy legyen dátum
+      }
+    }
+    console.log("Adatforrás az embed nézethez:", dataSource, currentDayDataToRender);
+    renderEmbedDataWithCentering(currentDayDataToRender); // Új renderelő függvény hívása
 
+  }).catch((error) => {
+    console.error("Nem sikerült betölteni az embed adatokat, fallback a substitutions-re:", error);
+    const todayDateStringFallback = formatDateYYYYMMDD(new Date());
+    const fallbackData = substitutionData[todayDateStringFallback] || { status: 'none', message: '', tableData: [], forDate: todayDateStringFallback };
+    fallbackData.forDate = todayDateStringFallback;
+    console.log("Adatforrás az embed nézethez (hiba utáni fallback): substitutions/" + todayDateStringFallback, fallbackData);
+    renderEmbedDataWithCentering(fallbackData); // Új renderelő függvény hívása
+  });
+}
 
+// Új segédfüggvény a rendereléshez, ami kezeli a középre igazítást
+function renderEmbedDataWithCentering(currentDayData) {
+  publicEmbedViewDiv.innerHTML = ''; // Tiszta lappal indulunk
+
+  const tableData = Array.isArray(currentDayData.tableData) ? currentDayData.tableData : [];
+  const columns = Array.isArray(currentDayData.columns) ? currentDayData.columns : ["Helyettesített", "Helyettesítő", "Terem/Megjegyzés", "Egyéb"];
+  const embedDateString = currentDayData.forDate || new Date().toISOString().slice(0, 10);
+  const formattedDate = formatFullDate(new Date(embedDateString));
+
+  const embedHeaderHTML = `
+    <div class="embed-header">
+      <div>
+        <img src="logo.png" alt="SZAG Logo" onerror="this.style.display='none'">
+        <div class="flex flex-col">
+          <h1 class="text-xl font-bold">SZAG Helyettesítések</h1>
+          <p class="text-sm text-indigo-200">${formattedDate}</p>
+        </div>
+      </div>
+      <span id="current-time" class="embed-view-element">--:--:--</span>
+    </div>
+  `;
+
+  if (currentDayData.status === 'available' && tableData.length > 0 && columns.length > 0) {
+    // Táblázat esetén:
+    publicEmbedViewDiv.innerHTML = embedHeaderHTML + `
+      <div class="embed-table-container" style="flex-grow: 1; width: 100%; overflow: hidden;"> <table id="embed-substitutions-table" style="width: 100%; height: 100%; table-layout: fixed; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Óra</th>
+              ${columns.map(header => `<th class="px-2 py-1 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">${escapeHtml(header)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200 text-gray-700 text-sm">
+            ${tableData.map((rowData, index) => `
+              <tr>
+                <td class="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}.</td>
+                ${columns.map((_, colIndex) => {
+                  const colKey = `col${colIndex + 1}`;
+                  return `<td class="px-2 py-1 whitespace-nowrap">${escapeHtml(rowData[colKey] || '')}</td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>`;
+} else {
+    // Üzenet típusú tartalmak (none, whiteboard, vagy nincs adat)
+    let messageIconClass = "fas fa-info-circle text-blue-600"; // Alapértelmezett
+    let messageText = escapeHtml(currentDayData.message || 'Nincsenek helyettesítési adatok ehhez a napra.');
+
+    if (currentDayData.status === 'none') {
+      messageIconClass = "fas fa-check-circle text-green-600";
+      messageText = "Nincsenek helyettesítések erre a napra.";
+    } else if (currentDayData.status === 'whiteboard') {
+      messageIconClass = "fas fa-info-circle text-blue-600";
+      messageText = escapeHtml(currentDayData.message || 'Technikai okok miatt a helyettesítések a fehér táblán találhatók.');
+    } else if (currentDayData.status === 'available' && (tableData.length === 0 || columns.length === 0)) {
+        messageText = "Nincsenek megjeleníthető helyettesítési adatok ehhez a napra.";
+    }
+
+    // Maga az üzenetblokk HTML-je
+    const messageBlockHTML = `
+      <div class="large-message large-message-icon"> <i class="${messageIconClass} message-icon"></i>
+        <p>${messageText}</p>
+      </div>
+    `;
+
+    // Üzenet esetén a speciális elrendezésű wrapperbe tesszük
+    publicEmbedViewDiv.innerHTML = embedHeaderHTML + `
+      <div class="embed-message-outer-wrapper" 
+           style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; padding: 1rem;">
+        <div style="flex-grow: 1.5; min-height: 0; width: 100%;"></div> ${messageBlockHTML}
+        <div style="flex-grow: 0.5; min-height: 0; width: 100%;"></div> </div>
+    `;
+  }
+  // Idő kijelző frissítése
+  currentTimeSpan = publicEmbedViewDiv.querySelector('#current-time');
+  if (currentTimeSpan) {
+      updateClockDisplay();
+  } else {
+      console.warn("current-time span nem található az embed nézetben a renderelés után.");
+  }
+}
         // --- Segédfüggvények ---
         function escapeHtml(unsafe) { return unsafe ? unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : ''; }
         // function escapeJsString(unsafe) { return unsafe ? unsafe.toString().replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n') : '';} // Nem kell foglalás modalhoz
@@ -1741,6 +1789,76 @@ let embedHTML = `
               console.log("renderEditTableSection finished.");
           }
 
+          function renderEmbedData(currentDayData) {
+            publicEmbedViewDiv.innerHTML = ''; // 💣 töröljük az előző tartalmat
+  const tableData = Array.isArray(currentDayData.tableData) ? currentDayData.tableData : [];
+  const columns = Array.isArray(currentDayData.columns) ? currentDayData.columns : ["Helyettesített", "Helyettesítő", "Terem/Megjegyzés", "Egyéb"];
+
+  const embedDateString = currentDayData.forDate || new Date().toISOString().slice(0, 10);
+  const formattedDate = formatFullDate(new Date(embedDateString));
+
+  let embedHTML = `
+    <div class="embed-header">
+      <div>
+        <img src="logo.png" alt="SZAG Logo" onerror="this.style.display='none'">
+        <div class="flex flex-col">
+          <h1 class="text-xl font-bold">SZAG Helyettesítések</h1>
+          <p class="text-sm text-indigo-200">${formattedDate}</p>
+        </div>
+      </div>
+      <span id="current-time" class="embed-view-element">--:--:--</span>
+    </div>
+  `;
+
+  if (currentDayData.status === 'none') {
+    embedHTML += `
+      <div class="large-message large-message-icon flex-grow">
+        <i class="fas fa-check-circle message-icon text-green-600"></i>
+        <p>Nincsenek helyettesítések erre a napra.</p>
+      </div>`;
+  } else if (currentDayData.status === 'whiteboard') {
+    embedHTML += `
+      <div class="large-message large-message-icon flex-grow">
+        <i class="fas fa-info-circle message-icon text-blue-600"></i>
+        <p>${escapeHtml(currentDayData.message || 'Technikai okok miatt a helyettesítések a fehér táblán találhatók.')}</p>
+      </div>`;
+  } else if (currentDayData.status === 'available' && tableData.length > 0 && columns.length > 0) {
+    embedHTML += `
+      <div class="w-full overflow-x-auto p-2 flex-grow">
+        <table id="embed-substitutions-table" class="min-w-full divide-y divide-gray-200 border border-gray-200">
+          <thead>
+            <tr>
+              <th class="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Óra</th>
+              ${columns.map(header => `
+                <th class="px-2 py-1 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">${escapeHtml(header)}</th>
+              `).join('')}
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200 text-gray-700 text-sm">
+            ${tableData.map((rowData, index) => `
+              <tr>
+                <td class="px-2 py-1 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}.</td>
+                ${columns.map((_, colIndex) => {
+                  const colKey = `col${colIndex + 1}`;
+                  return `<td class="px-2 py-1 whitespace-nowrap">${escapeHtml(rowData[colKey] || '')}</td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } else {
+    embedHTML += `
+      <div class="large-message large-message-icon flex-grow">
+        <i class="fas fa-info-circle message-icon text-blue-600"></i>
+        <p>Nincsenek helyettesítési adatok ehhez a napra.</p>
+      </div>`;
+  }
+
+  publicEmbedViewDiv.innerHTML = embedHTML;
+  currentTimeSpan = publicEmbedViewDiv.querySelector('#current-time');
+}
+
 
           async function saveSubstitutions() {
             if (!currentUser || !firestore) return showCustomAlert("Nincs jogosultságod a mentéshez (bejelentkezés szükséges).", "Hiba");
@@ -1814,7 +1932,7 @@ let embedHTML = `
                       console.log(`Substitution data for ${dateToSave} saved.`);
                  }
 
-                 showCustomAlert("Helyettesítési adatok sikeresen mentve.");
+                 showCustomAlert("Helyettesítési adatok sikeresen publikálva.");
 
                  // The Firestore listener for adminSubstitutions will update the global
                  // substitutionData object and trigger a re-render of the edit view.
@@ -2054,9 +2172,86 @@ let embedHTML = `
                  handleAdminUsersActions(event); // Felhasználó listák gombjai
              });
 
+             document.addEventListener('click', async (e) => {
+            const action = e.target?.dataset?.action;
+
+            if (action === 'save-and-publish') {
+                await handleSaveAndPublish(); // új függvény
+            }
+
+            // már létező mentés:
+            if (action === 'save-substitutions') {
+                await saveCurrentSubstitutionData(false); // csak mentés, publikálás nélkül
+            }
+        });
 
             console.log("Base event listeners attached.");
         }
+
+        async function handleSaveAndPublish() {
+  try {
+    setAdminLoading(true);
+
+    await saveCurrentSubstitutionData(true); // Mentés + embed
+
+    showCustomAlert("Sikeres mentés.");
+
+    // Embed újrarenderelése azonnal
+    renderPublicEmbedView();
+
+    // Szerkesztőnézet újrarenderelése (táblázat újraíródik, de friss és szerkeszthető marad)
+    renderEditView(adminSelectedDate);
+
+  } catch (error) {
+    console.error("Mentés és megjelenítés hiba:", error);
+    showCustomAlert("Hiba történt a mentés és megjelenítés során.", "Hiba");
+  } finally {
+    setAdminLoading(false);
+  }
+}
+
+
+async function saveCurrentSubstitutionData(publishNow = false) {
+  const docRef = firestore.collection("substitutions").doc(adminSelectedDate);
+
+  const table = document.getElementById("admin-substitutions-table");
+  const status = document.getElementById("admin-status-select")?.value || "none";
+  const message = document.getElementById("admin-message")?.value?.trim() || "";
+
+  const columns = Array.from(table.querySelectorAll("thead th"))
+    .slice(1)
+    .map(th => th.textContent.trim());
+
+  const tableData = Array.from(table.querySelectorAll("tbody tr")).map(tr => {
+    const cells = tr.querySelectorAll("td");
+    const row = {};
+    columns.forEach((_, i) => {
+      row[`col${i + 1}`] = cells[i + 1]?.textContent.trim() || "";
+    });
+    return row;
+  });
+
+  const payload = {
+    status,
+    message,
+    columns,
+    tableData
+  };
+
+  // ✅ 1. Mindig mentsük a substitutions/{dátum} dokumentumot
+  await docRef.set(payload);
+
+  // ✅ 2. Ha kérve van, publikáljuk az embed nézetbe is
+  if (publishNow) {
+    const embedRef = firestore.collection("publicEmbed").doc("today");
+    const payloadWithDate = {
+      ...payload,
+      forDate: adminSelectedDate
+    };
+    await embedRef.set(payloadWithDate);
+  }
+}
+
 
 
         // --- Login Popup Kezelése ---
